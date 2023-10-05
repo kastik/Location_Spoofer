@@ -18,6 +18,7 @@ import kotlin.concurrent.thread
 class UpdateLocationService : Service() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private lateinit var runnableJob: Runnable
+    private lateinit var broadIntent: Intent
     private var isRunning : Boolean = false
 
 
@@ -93,7 +94,7 @@ class UpdateLocationService : Service() {
                 override fun run() {
                     location.latitude = lat
                     location.longitude = lon
-                    location.setAltitude(10.0)
+                    location.altitude = alt
                     location.time = System.currentTimeMillis()
                     location.elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
                     location.setAccuracy(5F)
@@ -104,13 +105,14 @@ class UpdateLocationService : Service() {
             locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
             mainHandler.post(runnableJob)
             createNotification()
+            broadIntent = Intent("MOCK")
+            broadIntent.putExtra("SUCCESS",true)
+            sendBroadcast(broadIntent)
         } catch (e: SecurityException) {
 
-            val broadIntent = Intent("MOCK")
+            broadIntent = Intent("MOCK")
             broadIntent.putExtra("SUCCESS",false)
-            Log.d("MyLog","Sent brodcast")
             sendBroadcast(broadIntent)
-
             stop()
             stopSelf()
 

@@ -1,11 +1,31 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 @Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.mapsSecrets)
+    id("com.google.gms.google-services")
 }
 
 android {
+    val prop = Properties()
+    prop.load(FileInputStream(file("keystore.config")))
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file(prop.getProperty("debugKeystoreFile"))
+            storePassword = prop.getProperty("debugStorePassword")
+            keyAlias = prop.getProperty("debugKeyAlias")
+            keyPassword = prop.getProperty("debugKeyPassword")
+        }
+        create("release") {
+            storeFile = file(prop.getProperty("releaseKeystoreFile"))
+            storePassword = prop.getProperty("releaseStorePassword")
+            keyAlias = prop.getProperty("releaseKeyAlias")
+            keyPassword = prop.getProperty("releaseKeyPassword")
+        }
+    }
     namespace = "com.kastik.locationspoofer"
     compileSdk = 34
 
@@ -13,13 +33,14 @@ android {
         applicationId = "com.kastik.locationspoofer"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
         }
+        multiDexEnabled = false
     }
 
     buildTypes {
@@ -29,6 +50,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("release")
+        }
+        debug {
+            applicationIdSuffix = ".debug"
         }
     }
     compileOptions {
@@ -63,7 +88,7 @@ dependencies {
 
     implementation(libs.accompanist.permissions)
     implementation(libs.places)
-
+    implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
@@ -80,4 +105,6 @@ dependencies {
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
+    implementation(platform("com.google.firebase:firebase-bom:32.4.0"))
+    implementation("com.google.firebase:firebase-analytics-ktx")
 }

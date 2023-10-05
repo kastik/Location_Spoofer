@@ -1,9 +1,13 @@
 package com.kastik.locationspoofer.ui.screens
 
 import android.location.Location
+import android.location.LocationManager
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.LocationSource
@@ -19,22 +23,16 @@ import com.kastik.locationspoofer.data.MyViewModel
 fun MapScreen(
     viewModel: MyViewModel
 ) {
-    viewModel.setCameraState(rememberCameraPositionState())
 
     GoogleMap(
-        locationSource = if (viewModel.mapCustomLocationProviderEnabled().value) {
-            LocationSource(viewModel)
-        } else {
-            null
-        },
+        locationSource = getLocationSource(viewModel).value,
         modifier = Modifier.fillMaxSize(),
         properties = MapProperties(isMyLocationEnabled = viewModel.mapMyLocationEnabled().value),
         uiSettings = MapUiSettings(
             myLocationButtonEnabled = false,
             zoomControlsEnabled = false,
-            mapToolbarEnabled = false
-        ),
-        cameraPositionState = viewModel.getCameraState().value,
+            mapToolbarEnabled = false),
+        cameraPositionState = viewModel.cameraState,
         onPOIClick = { viewModel.setMarker(it.latLng) },
         onMapClick = { viewModel.setMarker(null) },
         onMapLongClick = { viewModel.setMarker(it) },
@@ -43,16 +41,26 @@ fun MapScreen(
         if (viewModel.getMarker().value != null) {
             Marker(state = MarkerState(viewModel.getMarker().value!!))
             LaunchedEffect(viewModel.getMarker().value) {
-                viewModel.getCameraState().value.animate(CameraUpdateFactory.newLatLng(viewModel.getMarker().value!!))
-                viewModel.getCameraState().value.animate(CameraUpdateFactory.zoomTo(13f))
+                viewModel.cameraState.animate(CameraUpdateFactory.newLatLng(viewModel.getMarker().value!!))
+                if(viewModel.cameraState.position.zoom<13f) {
+                    viewModel.cameraState.animate(CameraUpdateFactory.zoomTo(13f))
+                }
             }
         }
     }
 }
 
-class LocationSource(private val viewModel: MyViewModel) : LocationSource {
+
+private fun getLocationSource(viewModel: MyViewModel):MutableState<LocationSource?>{
+    return mutableStateOf(
+    if (viewModel.mapCustomLocationProviderEnabled().value) {
+        LocationSource(viewModel)
+    } else { null })
+}
+
+private class LocationSource(private val viewModel: MyViewModel) : LocationSource {
     override fun activate(p0: LocationSource.OnLocationChangedListener) {
-        val location = Location("")
+        val location = Location(LocationManager.GPS_PROVIDER)
         location.latitude = viewModel.getSpoofedLatLng().value.latitude
         location.longitude = viewModel.getSpoofedLatLng().value.longitude
         //viewModel.myLocationEnabled().value = true
