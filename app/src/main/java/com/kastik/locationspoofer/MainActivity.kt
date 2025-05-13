@@ -1,93 +1,74 @@
 package com.kastik.locationspoofer
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
-import android.os.Build
+import android.content.ServiceConnection
 import android.os.Bundle
-import android.util.Log
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.annotation.RequiresApi
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.compose.material3.MaterialTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.accompanist.permissions.rememberPermissionState
 import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken
-import com.kastik.locationspoofer.data.DatastoreRepo
-import com.kastik.locationspoofer.data.MyViewModel
-import com.kastik.locationspoofer.ui.UIStuff
+import com.kastik.locationspoofer.ui.screens.main.UIStuff
+import dagger.hilt.android.AndroidEntryPoint
 
 
-private val Context.dataStore by preferencesDataStore("settings")
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    /*
+    private lateinit var mService: UpdateLocationService
+    private var mBound: Boolean = false
 
-    private  lateinit var serviceBroadcastReceiver: BroadcastReceiver
-    private lateinit var viewModel: MyViewModel
+    private val connection = object : ServiceConnection {
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            // We've bound to LocalService, cast the IBinder and get LocalService instance.
+            val binder = service as UpdateLocationService.LocalBinder
+            mService = binder.getService()
+            mBound = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            mBound = false
+        }
+    }
+
+     */
+
     @ExperimentalPermissionsApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Places.initialize(this, "AIzaSyDTbMB1nHmiE_uGnbB15yaQ6-PJaTQvD9c")
+        Places.initialize(this, "AIzaSyDmH8eUm3nEYaaqA1q1zx9snrq2c_Mkoao")
         createNotificationChannel()
-
         setContent {
-            viewModel = createViewModel()
-            serviceBroadcastReceiver = ServiceBroadcastReceiver(viewModel)
-            val intentFilter = IntentFilter("MOCK")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(serviceBroadcastReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
-            }else{
-                registerReceiver(serviceBroadcastReceiver,intentFilter)
+            MaterialTheme {
+                UIStuff()
             }
-
-            UIStuff(viewModel)
-
-
-
         }
-
-
-
-
     }
 
-
-
-
     override fun onDestroy() {
-        unregisterReceiver(serviceBroadcastReceiver)
         super.onDestroy()
     }
 
-}
 
-
-
-private class ServiceBroadcastReceiver(val viewModel: MyViewModel): BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        val success = intent.getBooleanExtra("SUCCESS",false)
-        if (success){
-            viewModel.enableSpoofing()
-        }else{
-            viewModel.disableSpoofing()
-            viewModel.showMockPermissionErrorDialog(true)
+    override fun onStart() {
+        super.onStart()
+        /*
+        Intent(this, UpdateLocationService::class.java).also { intent ->
+            bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
+         */
     }
+
+    override fun onStop() {
+        super.onStop()
+        /*
+        unbindService(connection)
+        mBound = false
+         */
+    }
+
 }
-
-
-
-
-

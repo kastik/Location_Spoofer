@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+option java_package = "com.kastik.locationspoofer.debug";
+option java_multiple_files = true;
+
+message UserPreferences{
+  bool enable_xposed = 1;
+  bool auto_zoom_marker = 2;
+  bool denied_location = 3;
+  bool denied_notifications = 4;
+  bool denied_mock = 5;
+}
