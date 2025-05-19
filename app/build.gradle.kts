@@ -1,12 +1,15 @@
 import java.io.FileInputStream
 import java.util.Properties
 
-@Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.mapsSecrets)
+    alias(libs.plugins.compose.compiler)
     id("com.google.gms.google-services")
+    id("com.google.protobuf").version("0.9.5")
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -27,12 +30,12 @@ android {
         }
     }
     namespace = "com.kastik.locationspoofer"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.kastik.locationspoofer"
-        minSdk = 24
-        targetSdk = 34
+        minSdk = 26
+        targetSdk = 36
         versionCode = 2
         versionName = "1.0"
 
@@ -67,7 +70,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3"
+        //kotlinCompilerExtensionVersion = "1.5.3"
     }
     packaging {
         resources {
@@ -88,7 +91,6 @@ dependencies {
 
     implementation(libs.accompanist.permissions)
     implementation(libs.places)
-    implementation(libs.androidx.datastore.preferences)
 
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
@@ -98,6 +100,7 @@ dependencies {
     implementation(libs.ui.graphics)
     implementation(libs.ui.tooling.preview)
     implementation(libs.material3)
+    implementation(libs.material)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)
@@ -105,6 +108,40 @@ dependencies {
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
-    implementation(platform("com.google.firebase:firebase-bom:32.4.0"))
-    implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics.ktx)
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.datastore)
+    implementation(libs.protobuf.javalite)
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // Gson or Moshi for JSON to Protobuf conversion if needed
+    implementation("com.squareup.moshi:moshi:1.12.0")
+    implementation("com.squareup.moshi:moshi-kotlin:1.12.0")
+
+    // OkHttp for logging
+    implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
+
+    // Coroutine support if needed
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2")
+
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:3.8.0"
+    }
+    generateProtoTasks {
+        all().configureEach {
+            builtins {
+                maybeCreate("java").apply {
+                    option("lite")
+                }
+            }
+        }
+    }
 }

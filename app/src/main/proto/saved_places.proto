@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+option java_package = "com.kastik.locationspoofer.debug";
+option java_multiple_files = true;
+
+message SavedRoute {
+  LatLng origin = 1;
+  LatLng destination = 2;
+  string encoded_poly = 3;
+}
+
+message Place{
+  string placeCustomName = 1;
+  string placeFullText = 2;
+  string placePrimaryText = 3;
+  string placeSecondaryText = 4;
+  repeated string placeTypes = 5;
+  string placeId = 6;
+  LatLng latLng = 7;
+}
+
+message SavedPlaces{
+  repeated Place place = 1;
+}
+
+message LatLng{
+  double latitude = 1;
+  double longitude = 2;
+}
+
+
+
+

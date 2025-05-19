@@ -1,93 +1,99 @@
 package com.kastik.locationspoofer
 
-import android.Manifest
-import android.annotation.SuppressLint
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
+import android.content.ServiceConnection
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
+import android.os.IBinder
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.ContextCompat
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.accompanist.permissions.rememberPermissionState
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.libraries.places.api.Places
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken
-import com.kastik.locationspoofer.data.DatastoreRepo
-import com.kastik.locationspoofer.data.MyViewModel
-import com.kastik.locationspoofer.ui.UIStuff
+import com.kastik.locationspoofer.ui.screens.main.UIStuff
+import dagger.hilt.android.AndroidEntryPoint
 
 
-private val Context.dataStore by preferencesDataStore("settings")
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
-    private  lateinit var serviceBroadcastReceiver: BroadcastReceiver
-    private lateinit var viewModel: MyViewModel
+    private lateinit var mService: UpdateLocationService
+    private val _isBound = mutableStateOf(false)
 
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
+    private val connection = object : ServiceConnection {
+        override fun onServiceConnected(className: ComponentName, service: IBinder) {
+            val binder = service as UpdateLocationService.LocalBinder
+            mService = binder.getService()
+            _isBound.value = true
+        }
+
+        override fun onServiceDisconnected(arg0: ComponentName) {
+            _isBound.value = false
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     @ExperimentalPermissionsApi
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Places.initialize(this, "AIzaSyDTbMB1nHmiE_uGnbB15yaQ6-PJaTQvD9c")
+
+        Places.initialize(this, TODO())
+        startService(Intent(this, UpdateLocationService::class.java))
+
+
         createNotificationChannel()
-
         setContent {
-            viewModel = createViewModel()
-            serviceBroadcastReceiver = ServiceBroadcastReceiver(viewModel)
-            val intentFilter = IntentFilter("MOCK")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(serviceBroadcastReceiver, intentFilter, RECEIVER_NOT_EXPORTED)
-            }else{
-                registerReceiver(serviceBroadcastReceiver,intentFilter)
+            MaterialTheme {
+                if (_isBound.value) {
+                    UIStuff(mService)
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                }
             }
-
-            UIStuff(viewModel)
-
-
-
         }
-
-
-
-
     }
 
-
-
-
     override fun onDestroy() {
-        unregisterReceiver(serviceBroadcastReceiver)
         super.onDestroy()
     }
 
-}
+    override fun onStop() {
+        super.onStop()
+        if (mService.serviceState.value is LocationMockServiceState.Idle) {
+            //TODO stopService()
+        }
+    }
 
-
-
-private class ServiceBroadcastReceiver(val viewModel: MyViewModel): BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        val success = intent.getBooleanExtra("SUCCESS",false)
-        if (success){
-            viewModel.enableSpoofing()
-        }else{
-            viewModel.disableSpoofing()
-            viewModel.showMockPermissionErrorDialog(true)
+    override fun onStart() {
+        super.onStart()
+        Intent(this, UpdateLocationService::class.java).also { intent ->
+            bindService(intent, connection, BIND_AUTO_CREATE)
         }
     }
 }
 
-
-
-
-
+@Composable
+fun LoadingScreen() {
+    androidx.compose.material3.Text("Connecting to service...")
+}

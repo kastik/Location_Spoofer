@@ -1,87 +1,100 @@
 package com.kastik.locationspoofer
 
-import android.Manifest
+import android.app.AppOpsManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Context.NOTIFICATION_SERVICE
 import android.content.Intent
 import android.os.Build
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.google.accompanist.permissions.rememberPermissionState
-import com.google.android.libraries.places.api.model.AutocompleteSessionToken
-import com.google.maps.android.compose.rememberCameraPositionState
-import com.kastik.locationspoofer.data.DatastoreRepo
-import com.kastik.locationspoofer.data.MyViewModel
+import android.provider.Settings
+import android.provider.Settings.SettingNotFoundException
+import com.google.android.gms.maps.model.LatLng
 
-fun Context.startSpoofService(viewModel: MyViewModel) {
 
-    if (viewModel.floatingIconStart().value) {
-        val myIntent = Intent(this,UpdateLocationService::class.java)
-        myIntent.putExtra(
-            UpdateLocationService.Coordinates.Latitude.name,
-            viewModel.getMarker().value?.latitude
-        )
-        myIntent.putExtra(
-            UpdateLocationService.Coordinates.Longitude.name,
-            viewModel.getMarker().value?.longitude
-        )
-        //IN CASE USER ALT IS NOT NULL OR NULL
-        viewModel.getUserAlt().value?.let {
-            myIntent.putExtra(UpdateLocationService.Coordinates.Altitude.name, it )
-        }?:{
-            myIntent.putExtra(UpdateLocationService.Coordinates.Altitude.name, 0.0)
-        }
+fun decodePolyline(encoded: String): List<LatLng> {
+    val poly = mutableListOf<LatLng>()
+    var index = 0
+    val len = encoded.length
+    var lat = 0
+    var lng = 0
 
-        myIntent.action = UpdateLocationService.ACTIONS.START.name
-        viewModel.enableSpoofing()
-        startService(myIntent)
-    } else {
-        val myIntent = Intent(this, UpdateLocationService::class.java)
-        myIntent.action = UpdateLocationService.ACTIONS.STOP.name
-        viewModel.disableSpoofing()
-        startService(myIntent)
+    while (index < len) {
+        var result = 1
+        var shift = 0
+        var b: Int
+
+        // Decode latitude
+        do {
+            b = encoded[index++].code - 63 - 1
+            result += b shl shift
+            shift += 5
+        } while (b >= 0x1f)
+        lat += if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
+
+        // Decode longitude
+        result = 1
+        shift = 0
+        do {
+            b = encoded[index++].code - 63 - 1
+            result += b shl shift
+            shift += 5
+        } while (b >= 0x1f)
+        lng += if ((result and 1) != 0) (result shr 1).inv() else (result shr 1)
+
+        poly.add(LatLng(lat / 1e5, lng / 1e5))
     }
+
+    return poly
 }
 
 
 fun Context.createNotificationChannel() {
-    // Create the NotificationChannel, but only on API 26+ because
-    // the NotificationChannel class is not in the Support Library.
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                "running_channel",
-                "Running Service",
-                NotificationManager.IMPORTANCE_HIGH
-            )
-            val notificationManager =
-                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val channel = NotificationChannel(
+            "running_channel", "Running Service", NotificationManager.IMPORTANCE_HIGH
+        )
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
 }
 
 
+fun isMockLocationApp(context: Context): Boolean {
+    val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as? AppOpsManager
+    return if (appOps != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        val mode = appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_MOCK_LOCATION, android.os.Process.myUid(), context.packageName
+        )
+        mode == AppOpsManager.MODE_ALLOWED
+    } else {
+        false
+    }
+}
 
-@OptIn(ExperimentalPermissionsApi::class)
-@Composable
-fun createViewModel(): MyViewModel{
-    return MyViewModel(
-        DatastoreRepo.getInstance(LocalContext.current),
-        AutocompleteSessionToken.newInstance(),
-        rememberMultiplePermissionsState(
-            arrayListOf(
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.ACCESS_FINE_LOCATION
-            )
-        ),
-        if (Build.VERSION.SDK_INT>=Build.VERSION_CODES.TIRAMISU){
-            rememberPermissionState(Manifest.permission.POST_NOTIFICATIONS)
-        }else{
-            null
-        }, rememberCameraPositionState())
 
+//TODO
+object DeveloperOptionsHelper {
+    fun isDeveloperOptionsEnabled(context: Context): Boolean {
+        try {
+            return Settings.Global.getInt(
+                context.contentResolver, Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0
+            ) != 0
+        } catch (e: SettingNotFoundException) {
+            e.printStackTrace()
+            return false
+        }
+    }
+
+    fun openDeveloperOptions(context: Context) {
+        val intent = Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
+    }
+
+    fun openSettings(context: Context) {
+        val intent = Intent(Settings.ACTION_SETTINGS)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        context.startActivity(intent)
+    }
 }
