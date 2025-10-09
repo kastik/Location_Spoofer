@@ -33,7 +33,7 @@ class SavedRouteRepo(
     suspend fun updateRoute(updated: SavedRoute) {
         savedRoutesRepo.updateData { currentData ->
             val updatedRoutes = currentData.routesList.map { existing ->
-                if (existing == updated) {
+                if (existing.route.polyline == updated.route.polyline) {
                     updated
                 } else {
                     existing

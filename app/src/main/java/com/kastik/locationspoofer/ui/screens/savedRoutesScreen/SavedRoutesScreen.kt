@@ -74,6 +74,7 @@ fun SavedRoutesScreenContent(
                 SavedRouteCard(
                     startLocationName = route.originName,
                     endLocationName = route.destinationName,
+                    routeNickName = route.nickname,
                     onEditClick = { editingRoute = route },
                     onDeleteClick = { routeToDelete = route },
                     onMockClick = {
