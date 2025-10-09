@@ -124,7 +124,6 @@ fun EditSavedRouteDialog(
                         Text("Cancel")
                     }
                     Button(onClick = {
-                        //TODO Fix invocation?
                         onSave(
                             name.text,
                             origin.text,

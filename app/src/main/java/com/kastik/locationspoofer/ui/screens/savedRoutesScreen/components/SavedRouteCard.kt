@@ -39,6 +39,7 @@ import androidx.compose.material3.ButtonDefaults
 
 @Composable
 fun SavedRouteCard(
+    routeNickName: String,
     startLocationName: String,
     endLocationName: String,
     onEditClick: () -> Unit,
@@ -58,13 +59,33 @@ fun SavedRouteCard(
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("From", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Text(startLocationName, style = MaterialTheme.typography.titleMedium)
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("To", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-                Text(endLocationName, style = MaterialTheme.typography.titleMedium)
+            if (routeNickName.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "Route",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(routeNickName, style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        "From",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(startLocationName, style = MaterialTheme.typography.titleMedium)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "To",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(endLocationName, style = MaterialTheme.typography.titleMedium)
+                }
             }
+
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -101,7 +122,6 @@ fun SavedRouteCard(
 }
 
 
-
 @Preview(
     name = "Light Mode",
     showBackground = true,
@@ -115,12 +135,27 @@ fun SavedRouteCard(
 @Composable
 fun SavedRouteCardPreview() {
     LocationSpooferTheme {
-        SavedRouteCard(
-            startLocationName = "Start Location",
-            endLocationName = "End Location",
-            onEditClick = {},
-            onMockClick = {},
-            onDeleteClick = {}
-        )
+        LazyColumn {
+            item {
+                SavedRouteCard(
+                    startLocationName = "Start Location",
+                    endLocationName = "End Location",
+                    routeNickName = "Nicknamed Route",
+                    onEditClick = {},
+                    onMockClick = {},
+                    onDeleteClick = {}
+                )
+            }
+            item {
+                SavedRouteCard(
+                    startLocationName = "Start Location",
+                    endLocationName = "End Location",
+                    routeNickName = "",
+                    onEditClick = {},
+                    onMockClick = {},
+                    onDeleteClick = {}
+                )
+            }
+        }
     }
 }

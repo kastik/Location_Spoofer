@@ -29,10 +29,6 @@ class SavedRoutesScreenViewModel @Inject constructor(
         viewModelScope.launch {
             savedRoutesRepository.savedRoutesFlow.collect { savedRoutes ->
                 _savedRoutes.update {
-                    Log.d(
-                        "SavedRoutesScreenViewModel",
-                        "Received saved routes: ${savedRoutes.routesList}"
-                    )
                     savedRoutes
                 }
             }
@@ -61,7 +57,6 @@ class SavedRoutesScreenViewModel @Inject constructor(
                 .setLoop(newLoop)
                 .setSpeed(newSpeed)
                 .build()
-            Log.d("MyLog", "Updating route: $updated")
             savedRoutesRepository.updateRoute(updated)
         }
     }
