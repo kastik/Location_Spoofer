@@ -2,6 +2,7 @@ package com.kastik.locationspoofer.ui.screens.settingsScreen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kastik.locationspoofer.DarkMode
 import com.kastik.locationspoofer.data.datastore.UserPreferencesRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
@@ -25,9 +26,15 @@ class SettingsScreenViewModel @Inject constructor(
         }
     }
 
-    fun setDarkMode(value: Boolean){
+    fun setDarkMode(value: DarkMode){
         viewModelScope.launch {
             userPreferencesRepo.setDarkMode(value)
+        }
+    }
+
+    fun setStatusBar(value: Boolean){
+        viewModelScope.launch {
+            userPreferencesRepo.setEnableStatusBarSavedRoutes(value)
         }
     }
 

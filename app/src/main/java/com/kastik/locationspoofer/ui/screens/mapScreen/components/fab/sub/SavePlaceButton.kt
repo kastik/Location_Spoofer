@@ -13,6 +13,7 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -26,7 +27,7 @@ import com.kastik.locationspoofer.data.models.MarkerData
 fun SaveLocationButton(
     showSaveButton: Boolean,
     savePlace: () -> Unit,
-    isPlaceSaved: State<Boolean>,
+    isPlaceSaved: Boolean,
     removeSavedPlace: () -> Unit
 ) {
     AnimatedVisibility(
@@ -35,14 +36,14 @@ fun SaveLocationButton(
         exit = scaleOut()
     ) {
         FloatingActionButton(onClick = {
-            if (isPlaceSaved.value) {
+            if (isPlaceSaved) {
                 removeSavedPlace()
             } else {
                 savePlace()
             }
         }, content = {
             AnimatedContent(
-                targetState = isPlaceSaved.value,
+                targetState = isPlaceSaved,
                 transitionSpec = {
                     // Define enter and exit separately using this scope
                     ContentTransform(
@@ -62,14 +63,12 @@ fun SaveLocationButton(
             ) { targetIcon ->
                 if (targetIcon) {
                     Icon(
-
-                        imageVector = Icons.Default.Bookmark,
+                        imageVector = Icons.Default.Delete,
                         contentDescription = "Save this location"
                     )
                 } else {
-
                     Icon(
-                        imageVector = Icons.Default.RemoveCircleOutline,
+                        imageVector = Icons.Default.Bookmark,
                         contentDescription = "Remove place from saved"
                     )
                 }

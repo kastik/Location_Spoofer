@@ -1,0 +1,24 @@
+syntax = "proto3";
+import "google/maps/routing/v2/route.proto";
+import "google/type/latlng.proto";
+
+
+package kastik.locationspoofer;
+option java_package = "com.kastik.locationspoofer";
+option java_multiple_files = true;
+
+message SavedRoutes {
+  repeated SavedRoute routes = 1;
+}
+
+
+message SavedRoute {
+  string originName = 1;
+  string destinationName = 2;
+  google.maps.routing.v2.Route route = 3;
+  repeated google.type.LatLng visitDestinations = 4;
+  bool loop = 5;
+  float speed = 6;
+  string nickname = 7;
+}
+

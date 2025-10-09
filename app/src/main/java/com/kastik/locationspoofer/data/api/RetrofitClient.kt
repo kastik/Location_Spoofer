@@ -29,15 +29,12 @@ object RetrofitClient {
         .build()
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl("https://routes.googleapis.com")
+        .baseUrl("maps.googleapis.com")
         .client(okHttpClient)
         .addConverterFactory(GsonConverterFactory.create(gson))
         .build()
 
-
-
-
-    val api: GoogleRoutesApi = retrofit.create(GoogleRoutesApi::class.java)
+    val geocodingApi: GeocodingApi = retrofit.create(GeocodingApi::class.java)
 }
 
 class DebuggingAdapterFactory : TypeAdapterFactory {

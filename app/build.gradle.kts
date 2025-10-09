@@ -1,3 +1,5 @@
+import com.google.protobuf.gradle.id
+import com.google.protobuf.gradle.proto
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -6,8 +8,10 @@ plugins {
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.mapsSecrets)
     alias(libs.plugins.compose.compiler)
+    id("com.google.firebase.crashlytics")
+    id("com.google.firebase.firebase-perf")
     id("com.google.gms.google-services")
-    id("com.google.protobuf").version("0.9.5")
+    id("com.google.protobuf")
     id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
@@ -33,6 +37,9 @@ android {
     compileSdk = 36
 
     defaultConfig {
+        buildFeatures {
+            buildConfig = true
+        }
         applicationId = "com.kastik.locationspoofer"
         minSdk = 26
         targetSdk = 36
@@ -48,7 +55,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -64,6 +71,9 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
     kotlinOptions {
+        compileOptions {
+            jvmTarget
+        }
         jvmTarget = "1.8"
     }
     buildFeatures {
@@ -77,71 +87,116 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    sourceSets["main"].proto {
+        srcDirs("src/main/proto","src/main/proto/google")
+    }
 }
 
 dependencies {
-    implementation(libs.maps.compose.widgets)
+    implementation("javax.annotation:javax.annotation-api:1.3.2")
 
-    implementation(libs.androidx.navigation.compose)
-
-
-    implementation(libs.maps.compose)
-    implementation(libs.play.services.maps)
-    implementation(libs.androidx.datastore.preferences)
-
-    implementation(libs.accompanist.permissions)
-    implementation(libs.places)
-
+    //Generic
     implementation(libs.core.ktx)
-    implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.activity.compose)
+    implementation(libs.lifecycle.runtime.ktx)
+    implementation(libs.androidx.material.icons.extended)
+
+    //Generic Compose
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
     implementation(libs.ui.graphics)
     implementation(libs.ui.tooling.preview)
     implementation(libs.material3)
     implementation(libs.material)
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.espresso.core)
-    androidTestImplementation(platform(libs.compose.bom))
-    androidTestImplementation(libs.ui.test.junit4)
-    debugImplementation(libs.ui.tooling)
-    debugImplementation(libs.ui.test.manifest)
+    implementation(libs.maps.compose.widgets)
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.accompanist.permissions)
+
+    //Storage
+    implementation(libs.androidx.datastore)
+    implementation(libs.androidx.datastore.preferences)
+
+    //Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics.ktx)
-    implementation(libs.androidx.material.icons.extended)
-    implementation(libs.androidx.datastore)
-    implementation(libs.protobuf.javalite)
-    implementation(libs.hilt.android)
+
+    //Google Maps
+    implementation(libs.maps.compose)
+    implementation(libs.play.services.maps)
+    implementation(libs.places)
+
+    //DI
     ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.android)
     implementation(libs.androidx.hilt.navigation.compose)
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
-    // Gson or Moshi for JSON to Protobuf conversion if needed
-    implementation("com.squareup.moshi:moshi:1.12.0")
-    implementation("com.squareup.moshi:moshi-kotlin:1.12.0")
+    //Coroutines
+    implementation(libs.kotlinx.coroutines.android)
 
-    // OkHttp for logging
-    implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
+    //GRPC
+    implementation(libs.grpc.core)
+    implementation(libs.grpc.context)
+    implementation(libs.grpc.stub)
+    implementation(libs.grpc.okhttp)
+    implementation(libs.grpc.protobuf)
 
-    // Coroutine support if needed
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.5.2")
+    //Protobuf models
+    implementation(libs.proto.google.common.protos)
+
+    //Network
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.squareup.moshi)
+    implementation(libs.moshi.kotlin)
+    implementation(libs.logging.interceptor)
+
+
+    //Testing
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.espresso.core)
+    testImplementation(libs.junit)
+    debugImplementation(libs.ui.tooling)
+    debugImplementation(libs.ui.test.manifest)
 
 }
 
 protobuf {
     protoc {
-        artifact = "com.google.protobuf:protoc:3.8.0"
+        artifact = "com.google.protobuf:protoc:3.24.0"
+    }
+    plugins {
+        id("grpc") {
+            artifact = "io.grpc:protoc-gen-grpc-java:1.61.0"
+        }
+        id("grpckt") {
+            artifact = "io.grpc:protoc-gen-grpc-kotlin:1.4.1:jdk8@jar"
+        }
     }
     generateProtoTasks {
-        all().configureEach {
-            builtins {
-                maybeCreate("java").apply {
-                    option("lite")
-                }
+        all().forEach { task ->
+            task.builtins {
+                // Add this to generate Java code
+                //maybeCreate("kotlin")
+                maybeCreate("java")
+            }
+            task.plugins {
+                id("grpc")
+                //id("grpckt")
             }
         }
     }
+}
+
+secrets {
+    // To add your Maps API key to this project:
+    // 1. If the secrets.properties file does not exist, create it in the same folder as the local.properties file.
+    // 2. Add this line, where YOUR_API_KEY is your API key:
+    //        MAPS_API_KEY=YOUR_API_KEY
+    propertiesFileName = "secrets.properties"
+
+    // A properties file containing default secret values. This file can be
+    // checked in version control.
+    //defaultPropertiesFileName = "local.defaults.properties" TODO
 }

@@ -11,17 +11,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.kastik.locationspoofer.LocationMockServiceState
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.isGranted
+import com.google.accompanist.permissions.rememberPermissionState
+import com.kastik.locationspoofer.service.LocationMockServiceState
 import com.kastik.locationspoofer.ui.screens.mapScreen.MapScreenState
 
+@OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MyLocationButton(
-    mapScreenState: MapScreenState,
     serviceState: LocationMockServiceState,
     moveCameraToUser: () -> Unit
 ) {
+    val locationPermissionState = rememberPermissionState(
+        android.Manifest.permission.ACCESS_COARSE_LOCATION
+    )
     AnimatedVisibility(
-        mapScreenState is MapScreenState.Location || serviceState is LocationMockServiceState.MockingLocation,
+        locationPermissionState.status.isGranted || serviceState is LocationMockServiceState.MockingLocation,
         enter = scaleIn(),
         exit = scaleOut()
     ) {

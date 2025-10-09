@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option java_package = "com.kastik.locationspoofer";
+option java_multiple_files = true;
+
+message UserPreferences{
+  bool enable_xposed = 1;
+  bool auto_zoom_marker = 2;
+  bool denied_location = 3;
+  bool asked_location = 4;
+  bool asked_notification = 5;
+  bool denied_notifications = 6;
+  bool denied_mock = 7;
+  DarkMode dark_mode = 8;
+  bool resolve_routes = 9;
+  bool enableStatusBarSavedRoutes = 10;
+}
+
+enum DarkMode {
+  followSystem = 0;
+  darkMode = 1;
+  lightMode = 2;
+}

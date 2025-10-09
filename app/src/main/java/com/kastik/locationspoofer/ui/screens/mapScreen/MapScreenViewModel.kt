@@ -1,10 +1,7 @@
 package com.kastik.locationspoofer.ui.screens.mapScreen
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
-import androidx.annotation.RequiresPermission
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
@@ -13,269 +10,333 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
-import com.kastik.locationspoofer.LocationMockServiceState
-import com.kastik.locationspoofer.UpdateLocationService
-import com.kastik.locationspoofer.data.api.RetrofitClient
+import com.google.maps.places.v1.AutocompletePlacesRequest
+import com.google.maps.places.v1.GetPlaceRequest
+import com.google.maps.places.v1.Place
+import com.google.maps.places.v1.PlacesGrpc
+import com.google.maps.routing.v2.ComputeRoutesRequest
+import com.google.maps.routing.v2.Polyline
+import com.google.maps.routing.v2.Route
+import com.google.maps.routing.v2.RoutesGrpc
+import com.kastik.locationspoofer.SavedPlaces
+import com.kastik.locationspoofer.SavedRoute
+import com.kastik.locationspoofer.SavedRoutes
+import com.kastik.locationspoofer.UserPreferences
+import com.kastik.locationspoofer.areNotificationsEnabled
 import com.kastik.locationspoofer.data.datastore.SavedPlacesRepo
+import com.kastik.locationspoofer.data.datastore.SavedRouteRepo
 import com.kastik.locationspoofer.data.datastore.UserPreferencesRepo
+import com.kastik.locationspoofer.data.models.AppError
 import com.kastik.locationspoofer.data.models.MarkerData
-import com.kastik.locationspoofer.data.models.mapsAPI.RouteRequest
-import com.kastik.locationspoofer.data.models.mapsAPI.RouteResponse
-import com.kastik.locationspoofer.data.models.mapsAPI.Waypoint
-import com.kastik.locationspoofer.debug.Place
-import com.kastik.locationspoofer.debug.SavedPlaces
-import com.kastik.locationspoofer.decodePolyline
+import com.kastik.locationspoofer.data.models.toGmsLatLng
+import com.kastik.locationspoofer.data.models.toMarkerData
+import com.kastik.locationspoofer.data.models.toPlaces
+import com.kastik.locationspoofer.data.models.toWaypoint
 import com.kastik.locationspoofer.isMockLocationApp
+import com.kastik.locationspoofer.service.LocationMockServiceState
+import com.kastik.locationspoofer.service.UpdateLocationService
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
 class MapScreenViewModel @Inject constructor(
     val savedPlacesRepo: SavedPlacesRepo,
-    val preferencesRepo: UserPreferencesRepo
+    val preferencesRepo: UserPreferencesRepo,
+    val savedRouteRepo: SavedRouteRepo,
+    val routeStub: RoutesGrpc.RoutesBlockingStub,
+    val placesStub: PlacesGrpc.PlacesBlockingStub,
+    //val geoCodingApi: GeocodingApi //TODO WIP
 ) : ViewModel() {
 
-    val _mapScreenState: MutableState<MapScreenState> = mutableStateOf(MapScreenState.NoLocation)
-    val mapScreenState: State<MapScreenState> = _mapScreenState
-
-    private val _serviceState: MutableState<LocationMockServiceState> =
+    private val _serviceMutableState: MutableState<LocationMockServiceState> =
         mutableStateOf(LocationMockServiceState.Idle)
-    val serviceState: State<LocationMockServiceState> = _serviceState
+    val serviceState: State<LocationMockServiceState> = _serviceMutableState
+
+    private val _activeMarkerMutableState: SnapshotStateList<MarkerData> = mutableStateListOf()
+    val activeMarkerState: List<MarkerData> = _activeMarkerMutableState
+
+    private val _activeRouteMutableState: MutableState<Route?> = mutableStateOf(null)
+    val activeRouteState: State<Route?> = _activeRouteMutableState
+
+    private val _animatedLocationMutableState = MutableStateFlow<LatLng?>(null)
+    val animatedLocationState: StateFlow<LatLng?> = _animatedLocationMutableState
+
+    val savedPlacesFlow: Flow<SavedPlaces> = savedPlacesRepo.savedPlacesFlow
+    val savedRoutesFlow: Flow<SavedRoutes> = savedRouteRepo.savedRoutesFlow
+
+    private val _isActiveMarkerOnSavedPlaceMutableState = mutableStateOf(false)
+    val isActiveMarkerOnSavedPlaceState: State<Boolean> = _isActiveMarkerOnSavedPlaceMutableState
+
+    private val _isActiveRouteSavedMutableState = mutableStateOf(false)
+    val isActiveRouteSavedState: State<Boolean> = _isActiveRouteSavedMutableState
+
+    private val _errorDialogMutableState = mutableStateOf<AppError?>(null)
+    val errorDialogState: State<AppError?> = _errorDialogMutableState
+
+    val userPreferences: StateFlow<UserPreferences> = preferencesRepo.userPreferencesFlow.stateIn(
+        viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = UserPreferences.getDefaultInstance()
+    )
+
 
     fun setServiceState(state: LocationMockServiceState) {
-        _serviceState.value = state
+        _serviceMutableState.value = state
     }
 
+
     init {
-        viewModelScope.launch {
-            if (!preferencesRepo.userPreferencesFlow.first().askedLocation) {
-                _mapScreenState.value = MapScreenState.Error.LocationError
-            } else {
-                if (preferencesRepo.userPreferencesFlow.first().deniedLocation) {
-                    _mapScreenState.value = MapScreenState.DeniedLocation
-                } else {
-                    _mapScreenState.value = MapScreenState.Location
-                }
+        viewModelScope.launch {}
+    }
+
+    val hasPlacedMarkerOrPolyline: Boolean
+        get() = activeMarkerState.isNotEmpty() || activeRouteState.value != null
+
+
+    //Set names for routes dialog
+    private val _showOriginAndDestinationNameDialogMutableState = mutableStateOf(false)
+    val showOriginAndDestinationNameDialogState: State<Boolean> =
+        _showOriginAndDestinationNameDialogMutableState
+    private val _showPointNameDialogMutableState = mutableStateOf(false)
+    val showPointNameDialogState: State<Boolean> = _showPointNameDialogMutableState
+
+    private val _customOriginName = mutableStateOf("")
+    private val _customDestinationName = mutableStateOf("")
+    val originName: State<String> = _customOriginName
+    val destinationName: State<String> = _customDestinationName
+    fun setOriginName(name: String) {
+        _customOriginName.value = name
+    }
+
+    fun setDestinationName(name: String) {
+        _customDestinationName.value = name
+    }
+
+    private fun setNamesFromMarkers() {
+        _customOriginName.value = activeMarkerState.firstOrNull()?.poi?.name.orEmpty()
+        _customDestinationName.value = activeMarkerState.lastOrNull()?.poi?.name.orEmpty()
+    }
+
+    fun openSavePlaceDialog(){
+        if (activeMarkerState.size >= 2) {
+            toggleOriginAndDestinationNameDialog(true)
+        } else {
+            togglePointNameDialog(true)
+        }
+    }
+    fun toggleOriginAndDestinationNameDialog(show: Boolean) {
+        setNamesFromMarkers()
+        _showOriginAndDestinationNameDialogMutableState.value = show
+    }
+
+    fun togglePointNameDialog(show: Boolean) {
+        setNamesFromMarkers()
+        _showPointNameDialogMutableState.value = show
+    }
+
+
+    //Searching functionality
+    private val _searchResultsMutableState = mutableStateListOf<Place>()
+    val searchResultsState: List<Place> = _searchResultsMutableState
+    fun searchForPlace(query: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val request = AutocompletePlacesRequest.newBuilder().setInput(query).build()
+                val response = placesStub.autocompletePlaces(request)
+                val results = response.toPlaces()
+                _searchResultsMutableState.clear()
+                _searchResultsMutableState.addAll(results)
+            }.onFailure {
+                _searchResultsMutableState.clear()
+                _errorDialogMutableState.value = AppError(
+                    title = "Something went wrong while searching",
+                    action = {},
+                    dismiss = {})
             }
         }
     }
 
-    val savedPlacesFlow: Flow<SavedPlaces> = savedPlacesRepo.savedPlacesFlow
 
-    private val _markerState: SnapshotStateList<MarkerData> = mutableStateListOf()
-    val markerState: List<MarkerData> = _markerState
-
-    private val _polyLineState: SnapshotStateList<LatLng> = mutableStateListOf()
-    val polylineState: List<LatLng> = _polyLineState
-
-    private val _isPlaceSaved = MutableStateFlow<Boolean>(false)
-    val isPlaceSaved: StateFlow<Boolean> = _isPlaceSaved
-
-    fun hasPlacedMarkerOrPolyline(): Boolean {
-        return _markerState.isNotEmpty() || _polyLineState.isNotEmpty()
-    }
-
-
-    fun deniedLocation() {
-        viewModelScope.launch {
-            preferencesRepo.setDeniedLocationPermission(true)
-            preferencesRepo.setAskedLocation(true)
-            _mapScreenState.value = MapScreenState.NoLocation
+    fun moveToPlaceWithId(placeId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val request = placesStub.getPlace(
+                    GetPlaceRequest.newBuilder().setName("places/$placeId") //TODO Clean
+                        .build()
+                )
+                moveCamera(
+                    LatLng(
+                        request.location.latitude, request.location.longitude
+                    )
+                )
+            }.onFailure {
+                _errorDialogMutableState.value = AppError(
+                    title = "Something went wrong",
+                    action = {},
+                    dismiss = {})
+            }
         }
     }
 
-    fun acceptedLocation() {
+
+    fun saveLocationPermissionRequest(){
         viewModelScope.launch {
-            preferencesRepo.setDeniedLocationPermission(false)
             preferencesRepo.setAskedLocation(true)
-            _mapScreenState.value = MapScreenState.Location
         }
     }
 
-    fun acceptedNotifications() {
+    fun saveNotificationPermissionRequest() {
         viewModelScope.launch {
-            preferencesRepo.setDeniedNotificationPermission(true)
             preferencesRepo.setAskedNotificationPermission(true)
         }
     }
 
-    fun showSaveButton(): Boolean {
-        return _markerState.size == 1
+    val showSaveButton: Boolean
+        get() = activeMarkerState.isNotEmpty()
+
+    private suspend fun saveIndividualPlace() {
+        val marker = activeMarkerState.first()
+        val place = marker.poi?.let { pointOfInterest ->
+            Place.newBuilder().setId(pointOfInterest.placeId).setLocation(
+                com.google.type.LatLng.newBuilder().setLatitude(pointOfInterest.latLng.latitude)
+                    .setLongitude(pointOfInterest.latLng.longitude).build()
+            ).setName(pointOfInterest.name).build()
+        } ?: Place.newBuilder().setName(_customOriginName.value).setLocation(
+            com.google.type.LatLng.newBuilder().setLatitude(marker.latLng.latitude)
+                .setLongitude(marker.latLng.longitude).build()
+        ).build()
+        savedPlacesRepo.addNewPlace(place)
     }
 
-    fun savePlace() {
-        viewModelScope.launch {
+    private suspend fun saveRoute() {
+        val route = SavedRoute.newBuilder().setRoute(activeRouteState.value)
+            .setOriginName(_customOriginName.value).setDestinationName(_customDestinationName.value)
+            .addAllVisitDestinations(activeMarkerState.map {
+                it.latLng.toMarkerData().toGmsLatLng()
+            }).build()
+        savedRouteRepo.addNewRoute(route)
+    }
 
-            val place = Place.newBuilder()
-                .setPlaceId(_markerState.first().placeId)
-                .setLatLng(
-                    com.kastik.locationspoofer.debug.LatLng.newBuilder()
-                        .setLatitude(_markerState.first().latLng.latitude)
-                        .setLongitude(_markerState.first().latLng.longitude)
-                )
-                .setPlacePrimaryText(_markerState.first().name)
-                .build()
-            //TODO Make this cleaner
-            _isPlaceSaved.value = true
-            savedPlacesRepo.addNewPlace(place)
+    fun saveActivePlaceOrRoute() {
+        viewModelScope.launch {
+            if (activeRouteState.value != null) { //If it's a route save
+                saveRoute()
+            } else { //If it's not a route save and is a place save instead
+                saveIndividualPlace()
+            }
+            _isActiveMarkerOnSavedPlaceMutableState.value = true
         }
     }
 
     fun deletePlace() {
         viewModelScope.launch {
             //TODO Make this cleaner
-            _isPlaceSaved.value = false
-            savedPlacesRepo.deletePlaceById(_markerState[0].placeId.toString())
+            _isActiveMarkerOnSavedPlaceMutableState.value = false
+            savedPlacesRepo.deletePlaceById(activeMarkerState[0].poi!!.placeId)
         }
     }
 
     fun addMarker(markerData: MarkerData) {
-        _polyLineState.clear()
+        //_polyLineState.clear()
         viewModelScope.launch {
-            markerData.let {
-                _isPlaceSaved.value =
-                    savedPlacesRepo.checkIfPlaceExists(markerData.placeId) //TODO Don't assert
+            markerData.poi.let { pointOfInterest ->
+                _isActiveMarkerOnSavedPlaceMutableState.value =
+                    savedPlacesRepo.checkIfPlaceExists(pointOfInterest?.placeId) //TODO Don't assert
             }
-            _markerState.add(markerData)
-            if (_markerState.size >= 2) {
+            _activeMarkerMutableState.add(markerData)
+            if (activeMarkerState.size >= 2) {
                 routeSearch()
             }
         }
     }
 
     fun removeMarker(markerData: MarkerData) {
-        _markerState.remove(markerData)
+        _activeMarkerMutableState.remove(markerData)
     }
 
     fun clearAllMarkers() {
-        _markerState.clear()
-    }
-
-    val animateToLocation = MutableSharedFlow<LatLng?>(extraBufferCapacity = 1)
-
-
-    fun moveCameraToUser(context: Context) {
-        viewModelScope.launch {
-            moveCamera(getUserLocation(context))
+        _activeMarkerMutableState.clear()
+        if (_serviceMutableState.value !is LocationMockServiceState.MockingLocation){
+            _activeRouteMutableState.value = null
         }
     }
-
-    @RequiresPermission(allOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
-    suspend fun getUserLocation(context: Context): LatLng {
-        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-        val location = fusedLocationClient.lastLocation.await()
-        return LatLng(location.latitude, location.longitude)
-    }
-
     fun moveCamera(location: LatLng) {
-        animateToLocation.tryEmit(location)
+        _animatedLocationMutableState.value = location
     }
 
 
     @OptIn(ExperimentalPermissionsApi::class)
     fun stopSpoofing(
-        binder: UpdateLocationService,
-        context: Context,
-        hasLocationPermission: Boolean
+        binder: UpdateLocationService, context: Context, hasLocationPermission: Boolean
     ) {
         binder.stopMocking()
-        viewModelScope.launch {
-            if (preferencesRepo.userPreferencesFlow.first().deniedLocation) {
-                _mapScreenState.value = MapScreenState.NoLocation
-            } else {
-                if (!preferencesRepo.userPreferencesFlow.first().askedLocation) {
-                    _mapScreenState.value = MapScreenState.Error.LocationError
-                } else {
-                    _mapScreenState.value = MapScreenState.Location
-                }
-            }
-        }
     }
 
     fun routeSearch() {
-        viewModelScope.launch {
-            val response = searchForRoute(
-                startLocation = com.kastik.locationspoofer.data.models.mapsAPI.LatLng(
-                    _markerState.first().latLng.latitude, _markerState.first().latLng.longitude
-                ), endLocation = com.kastik.locationspoofer.data.models.mapsAPI.LatLng(
-                    _markerState.last().latLng.latitude, _markerState.last().latLng.longitude
-                ), intermediates = _markerState.subList(1, _markerState.size - 1).map {
-                    com.kastik.locationspoofer.data.models.mapsAPI.LatLng(
-                        it.latLng.latitude, it.latLng.longitude
-                    )
-                })
-            _polyLineState.clear()
-            _polyLineState.addAll(decodePolyline(response.routes[0].polyline.encodedPolyline))
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val response = routeStub.computeRoutes(
+                    ComputeRoutesRequest.newBuilder()
+                        .setOrigin(activeMarkerState.first().toWaypoint())
+                        .setDestination(activeMarkerState.last().toWaypoint()).addAllIntermediates(
+                            activeMarkerState.subList(1, activeMarkerState.size - 1)
+                                .map { it.toWaypoint() }).build()
+                )
+                _activeRouteMutableState.value = response.getRoutes(0)
+                //_polyLineState.clear()
+                //_polyLineState.addAll(decodePolyline(response.routes[0].polyline.encodedPolyline))
+            }.onFailure {
+                _errorDialogMutableState.value = AppError(
+                    title = "Something went wrong while searching for route",
+                    action = {},
+                    dismiss = {})
+            }
+
         }
     }
 
-    private suspend fun searchForRoute(
-        startLocation: com.kastik.locationspoofer.data.models.mapsAPI.LatLng,
-        endLocation: com.kastik.locationspoofer.data.models.mapsAPI.LatLng,
-        intermediates: List<com.kastik.locationspoofer.data.models.mapsAPI.LatLng>? = null
-    ): RouteResponse {
-
-        val response = RetrofitClient.api.getRoute(
-            request = RouteRequest(
-                Waypoint(
-                    location = com.kastik.locationspoofer.data.models.mapsAPI.Location(
-                        startLocation
-                    )
-                ),
-                Waypoint(
-                    via = false, location = com.kastik.locationspoofer.data.models.mapsAPI.Location(
-                        endLocation,
-                    )
-                ),
-                intermediates = intermediates?.map {
-                    Waypoint(
-                        location = com.kastik.locationspoofer.data.models.mapsAPI.Location(
-                            com.kastik.locationspoofer.data.models.mapsAPI.LatLng(
-                                it.latitude, it.longitude
-                            )
-                        )
-                    )
-                },
-            ), apiKey = TODO(), fieldMask = "*"
-
-        )
-        return response
+    fun setPolyline(polyline: String) {
+        //_polyLineState.clear()
+        //_polyLineState.addAll(decodePolyline(polyline))
     }
 
 
+    //TODO CLEAN THIS
     @SuppressLint("InlinedApi")
     @OptIn(ExperimentalPermissionsApi::class)
     fun startMockingLocation(
         context: Context,
         binder: UpdateLocationService,
-        notificationsGranted: Boolean
+        navigateImidietly: Polyline? = null
     ) {
         if (!isMockLocationApp(context)) {
-            //TODO Find a way to dismiss it after exiting the intent if user made the change
-            _mapScreenState.value = MapScreenState.Error.MockError
+            _errorDialogMutableState.value = AppError(
+                title = "Mock permission error",
+                message = "You need to set this app as a mock provider in the developer options",
+                action = {},
+                dismiss = {})
+        }
+        if (!areNotificationsEnabled(context)) {
+            _errorDialogMutableState.value = AppError(
+                title = "Notification permission error",
+                message = "You need to allow this app to post notifications to spoof your location",
+                action = {},
+                dismiss = {})
         }
 
-        if (notificationsGranted) {
-            if (polylineState.isNotEmpty()) {
-                binder.setLocation(
-                    polylineState
-                )
-            } else {
-                binder.setLocation(
-                    _markerState.first().latLng
-                )
-            }
-
-
+        when {
+            navigateImidietly != null -> binder.startMockingLocation(navigateImidietly)
+            activeRouteState.value != null -> binder.startMockingLocation(activeRouteState.value!!)
+            else -> binder.startMockingLocation(activeMarkerState.first().latLng)
         }
+
     }
 }

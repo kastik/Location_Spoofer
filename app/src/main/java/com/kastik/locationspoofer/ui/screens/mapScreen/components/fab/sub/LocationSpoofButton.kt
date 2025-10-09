@@ -20,7 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.android.gms.maps.model.LatLng
-import com.kastik.locationspoofer.LocationMockServiceState
+import com.kastik.locationspoofer.service.LocationMockServiceState
 import com.kastik.locationspoofer.data.models.MarkerData
 import com.kastik.locationspoofer.data.models.SpoofFabData
 import com.kastik.locationspoofer.ui.screens.mapScreen.MapScreenState

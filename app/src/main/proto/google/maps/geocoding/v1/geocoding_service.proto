@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package google.maps.geocoding.v1;
+
+option java_package = "com.google.maps.geocoding.v1";
+option java_outer_classname = "GeocodingServiceProto";
+option go_package = "google.golang.org/genproto/googleapis/maps/geocoding/v1;geocoding";
+
+import "google/maps/geocoding/v1/geocoding_resources.proto";
+
+// Geocoding service for converting between addresses and geographic coordinates.
+service GeocodingService {
+  // Forward geocoding: address or place ID to geographic coordinates.
+  rpc Geocode(GeocodeRequest) returns (GeocodeResponse);
+
+  // Reverse geocoding: coordinates to address.
+  rpc ReverseGeocode(ReverseGeocodeRequest) returns (ReverseGeocodeResponse);
+}
+
+// Request for forward geocoding.
+message GeocodeRequest {
+  // The address to geocode. One of `address` or `place_id` must be set.
+  string address = 1;
+
+  // A place ID reference for the place.
+  string place_id = 2;
+
+  // Region biasing, e.g., "us".
+  string region_code = 3;
+
+  // Bounds to bias results.
+  LatLngBounds bounds = 4;
+
+  // Component filtering, e.g., country, postal_code.
+  map<string, string> components = 5;
+}
+
+// Request for reverse geocoding.
+message ReverseGeocodeRequest {
+  // Location to reverse geocode.
+  LatLng location = 1;
+
+  // Region biasing, e.g., "us".
+  string region_code = 2;
+
+  // Bounds to bias results.
+  LatLngBounds bounds = 3;
+
+  // Component filtering, e.g., country, postal_code.
+  map<string, string> components = 4;
+}
+
+// Response from forward geocoding.
+message GeocodeResponse {
+  repeated GeocodingResult results = 1;
+  GeocodingStatus status = 2;
+}
+
+// Response from reverse geocoding.
+message ReverseGeocodeResponse {
+  repeated GeocodingResult results = 1;
+  GeocodingStatus status = 2;
+}
+
+// Status codes for geocoding.
+enum GeocodingStatus {
+  GEOCODING_STATUS_UNSPECIFIED = 0;
+  OK = 1;
+  ZERO_RESULTS = 2;
+  OVER_DAILY_LIMIT = 3;
+  OVER_QUERY_LIMIT = 4;
+  REQUEST_DENIED = 5;
+  INVALID_REQUEST = 6;
+  UNKNOWN_ERROR = 7;
+}

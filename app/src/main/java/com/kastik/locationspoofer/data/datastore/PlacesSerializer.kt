@@ -1,7 +1,7 @@
 package com.kastik.locationspoofer.data.datastore
 
 import androidx.datastore.core.Serializer
-import com.kastik.locationspoofer.debug.SavedPlaces
+import com.kastik.locationspoofer.SavedPlaces
 import java.io.InputStream
 import java.io.OutputStream
 

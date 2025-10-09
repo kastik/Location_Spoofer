@@ -1,7 +1,8 @@
 package com.kastik.locationspoofer.data.datastore
 
 import androidx.datastore.core.DataStore
-import com.kastik.locationspoofer.debug.UserPreferences
+import com.kastik.locationspoofer.DarkMode
+import com.kastik.locationspoofer.UserPreferences
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 
@@ -10,7 +11,15 @@ class UserPreferencesRepo(private val userPreferencesRepo: DataStore<UserPrefere
     val userPreferencesFlow: Flow<UserPreferences> = userPreferencesRepo.data
         .catch {  } //TODO?
 
-    suspend fun setDarkMode(value: Boolean){
+    suspend fun setResolveRoutes(value: Boolean){
+        userPreferencesRepo.updateData { currentData ->
+            currentData.toBuilder()
+                .setResolveRoutes(value)
+                .build()
+        }
+    }
+
+    suspend fun setDarkMode(value: DarkMode){
         userPreferencesRepo.updateData { currentData ->
             currentData.toBuilder()
                 .setDarkMode(value)
@@ -69,6 +78,14 @@ class UserPreferencesRepo(private val userPreferencesRepo: DataStore<UserPrefere
         userPreferencesRepo.updateData { currentData ->
             currentData.toBuilder()
                 .setDeniedMock(value)
+                .build()
+        }
+    }
+
+    suspend fun setEnableStatusBarSavedRoutes(value: Boolean){
+        userPreferencesRepo.updateData { currentData ->
+            currentData.toBuilder()
+                .setEnableStatusBarSavedRoutes(value)
                 .build()
         }
     }

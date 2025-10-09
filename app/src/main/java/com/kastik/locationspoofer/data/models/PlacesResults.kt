@@ -1,5 +1,6 @@
 package com.kastik.locationspoofer.data.models
 
+import android.util.Log
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.tasks.Task
 import com.google.android.libraries.places.api.model.Place
@@ -11,7 +12,8 @@ data class PlaceResult(
     val placeName: String
 )
 
-fun PlaceResult.toLatLng(
+//TODO USE STUB
+fun PlaceResult.toGmsLatLng(
     fetchPlace: (FetchPlaceRequest) -> Task<FetchPlaceResponse>,
     callback: (LatLng) -> Unit
 ){

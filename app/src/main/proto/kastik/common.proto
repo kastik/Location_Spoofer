@@ -1,0 +1,13 @@
+syntax = "proto3";
+option java_package = "com.kastik.locationspoofer";
+option java_multiple_files = true;
+
+message Location {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+message Polyline {
+  string encodedPolyline = 1;
+  //string geoJsonLinestring = 2; TODO?
+}

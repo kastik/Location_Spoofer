@@ -1,12 +1,12 @@
 package com.kastik.locationspoofer.ui.screens.mapScreen.components.fab
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.kastik.locationspoofer.LocationMockServiceState
-import com.kastik.locationspoofer.data.models.MarkerData
-import com.kastik.locationspoofer.debug.Place
+import com.kastik.locationspoofer.service.LocationMockServiceState
+import com.kastik.locationspoofer.ui.screens.mapScreen.components.fab.sub.SavedPlacesButton
 import com.kastik.locationspoofer.ui.screens.mapScreen.MapScreenState
 import com.kastik.locationspoofer.ui.screens.mapScreen.components.fab.sub.LocationSpoofButton
 import com.kastik.locationspoofer.ui.screens.mapScreen.components.fab.sub.MyLocationButton
@@ -16,15 +16,16 @@ import com.kastik.locationspoofer.ui.screens.mapScreen.components.fab.sub.SaveLo
 @Composable
 fun FloatingActionButtons(
     hasPlacedPolylineOrMarker: Boolean,
-    mapScreenState: MapScreenState,
     serviceState: LocationMockServiceState,
     moveCameraToUser: () -> Unit,
     savePlace: () -> Unit,
     showSaveButton: Boolean,
-    isPlaceSaved: State<Boolean>,
+    isPlaceSaved: Boolean,
     removeSavedPlace: () -> Unit,
     stopSpoofing: () -> Unit,
     startSpoofing: () -> Unit,
+    navigateToSavedRoutesScreen: () -> Unit,
+    showSavedPlaces: Boolean
 ) {
     Column {
         SaveLocationButton(
@@ -40,8 +41,12 @@ fun FloatingActionButtons(
             serviceState = serviceState,
             hasPlacedMarkerOrPolyline = hasPlacedPolylineOrMarker,
         )
+        AnimatedVisibility(showSavedPlaces) {
+            SavedPlacesButton(
+                navigateToSavedRoutesScreen
+            )
+        }
         MyLocationButton(
-            mapScreenState = mapScreenState,
             moveCameraToUser = moveCameraToUser,
             serviceState = serviceState
         )

@@ -4,8 +4,8 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.location.Location
 import android.location.LocationManager
-import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
@@ -22,41 +23,44 @@ import com.google.android.gms.maps.LocationSource
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.kastik.locationspoofer.UpdateLocationService
-import com.kastik.locationspoofer.debug.SavedPlaces
+import com.kastik.locationspoofer.DarkMode
+import com.kastik.locationspoofer.SavedPlaces
+import com.kastik.locationspoofer.SavedRoutes
+import com.kastik.locationspoofer.getUserLocation
+import com.kastik.locationspoofer.service.UpdateLocationService
 import com.kastik.locationspoofer.ui.screens.AvailableScreens
-import com.kastik.locationspoofer.ui.screens.mapScreen.components.dialogs.ErrorDialog
+import com.kastik.locationspoofer.ui.screens.mapScreen.components.dialogs.NameInputDialog
 import com.kastik.locationspoofer.ui.screens.mapScreen.components.fab.FloatingActionButtons
 import com.kastik.locationspoofer.ui.screens.mapScreen.components.map.Map
 import com.kastik.locationspoofer.ui.screens.mapScreen.components.searchbar.TopSearchBar
-import com.kastik.locationspoofer.ui.screens.mapScreen.components.searchbar.sub.SearchBarChips
-import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 
-//TODO Proper permission checks
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalPermissionsApi::class, MapsComposeExperimentalApi::class)
 @Composable
 fun MapScreen(
     updateLocationService: UpdateLocationService,
-    navigate: (String) -> Unit
+    navigate: (String) -> Unit,
+    polyline: String? = null
 ) {
-
     val viewModel: MapScreenViewModel = hiltViewModel()
-    viewModel.setServiceState(updateLocationService.serviceState.value)
-
-
-    val mapScreenState = viewModel.mapScreenState
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val cameraState = rememberCameraPositionState()
-    val context = LocalContext.current
-    val markerData = viewModel.markerState
+    val animatedLocationState = viewModel.animatedLocationState.collectAsStateWithLifecycle()
+
+
+    viewModel.setServiceState(updateLocationService.serviceState.value)
+    val markerData = viewModel.activeMarkerState
 
 
     val savedPlacesState = viewModel.savedPlacesFlow.collectAsState(
-        SavedPlaces.newBuilder().build()
+        SavedPlaces.getDefaultInstance()
+    )
+
+    val savedRoutesState = viewModel.savedRoutesFlow.collectAsState(
+        SavedRoutes.getDefaultInstance()
     )
 
     val locationPermissionState = rememberMultiplePermissionsState(
@@ -69,43 +73,60 @@ fun MapScreen(
         Manifest.permission.POST_NOTIFICATIONS
     )
 
+    val userPreferences = viewModel.userPreferences.collectAsStateWithLifecycle()
+
+    //Used when navigating to MapScreen with a polyline parameter
+    LaunchedEffect(Unit) {
+        if (polyline != null) {
+            viewModel.setPolyline(polyline)
+            viewModel.startMockingLocation(
+                binder = updateLocationService,
+                context = context,
+            )
+        }
+    }
+
+    //When emitting a new value to animatedLocationState, update the camera to that location
+    LaunchedEffect(animatedLocationState.value) {
+        animatedLocationState.value?.let {
+            cameraState.animate(
+                CameraUpdateFactory.newLatLngZoom(
+                    LatLng(it.latitude, it.longitude), 13f
+                )
+            )
+        }
+    }
+
 
     Scaffold(topBar = {
         TopSearchBar(
-            visible = true,
-            savedPlacesView = {
-                SearchBarChips(
-                    savedPlaces = savedPlacesState.value, placeMarker = { viewModel.addMarker(it) })
-            },
-            navigateToSettings = { navigate(AvailableScreens.Settings.name) },
-            moveCamera = {
-                viewModel.moveCamera(
-                    LatLng(
-                        it.latitude, it.longitude
-                    )
-                )
-            },
-
-            )
-
+            navigateToSettings = { navigate(AvailableScreens.SettingsScreen.name) },
+            searchPlaces = { query -> viewModel.searchForPlace(query) },
+            moveToPlaceWithId = { id -> viewModel.moveToPlaceWithId(id) },
+            placeResults = viewModel.searchResultsState,
+            savedPlacesState = savedPlacesState.value,
+            savedRoutesState = savedRoutesState.value
+        )
     }, floatingActionButton = {
         FloatingActionButtons(
-            mapScreenState = viewModel.mapScreenState.value,
+            showSavedPlaces = userPreferences.value.enableStatusBarSavedRoutes,
             moveCameraToUser = {
                 scope.launch {
-                    cameraState.animate(
-                        CameraUpdateFactory.newLatLngZoom(
-                            viewModel.getUserLocation(context), 13f
+                    getUserLocation(context)?.let {
+                        cameraState.animate(
+                            CameraUpdateFactory.newLatLngZoom(
+                                LatLng(
+                                    it.latitude, it.longitude
+                                ), 13f
+                            )
                         )
-                    )
+                    }
                 }
             },
-            savePlace = {
-                viewModel.savePlace()
-            },
-            showSaveButton = viewModel.showSaveButton(),
+            savePlace = { viewModel.openSavePlaceDialog() },
+            showSaveButton = viewModel.showSaveButton,
             removeSavedPlace = { viewModel.deletePlace() },
-            isPlaceSaved = viewModel.isPlaceSaved.collectAsState(false),
+            isPlaceSaved = viewModel.isActiveMarkerOnSavedPlaceState.value,
             stopSpoofing = {
                 scope.launch {
                     viewModel.stopSpoofing(
@@ -116,104 +137,77 @@ fun MapScreen(
                 }
             },
             startSpoofing = {
-                Log.d("MyLog", "In start Spoofing in map screen")
                 viewModel.startMockingLocation(
                     binder = updateLocationService,
                     context = context,
-                    notificationsGranted = notificationPermissionState.status.isGranted
                 )
 
             },
-            hasPlacedPolylineOrMarker = viewModel.hasPlacedMarkerOrPolyline(),
-            serviceState = updateLocationService.serviceState.value
-        )
-    }) {
-        AnimatedVisibility(mapScreenState.value is MapScreenState.Error) {
-            val error = mapScreenState.value as? MapScreenState.Error
-            when (error) {
-                MapScreenState.Error.LocationError -> {
-                    ErrorDialog(
-                        title = "Location error",
-                        message = "The location permission is strongly encouraged",
-                        onCLick = {
-                            locationPermissionState.launchMultiplePermissionRequest()
-                        },
-                        dismiss = {
-                            viewModel.deniedLocation()
-                        }
-                    )
-                }
+            hasPlacedPolylineOrMarker = viewModel.hasPlacedMarkerOrPolyline,
+            serviceState = updateLocationService.serviceState.value,
+            navigateToSavedRoutesScreen = {
+                navigate(AvailableScreens.SavedRoutesScreen.name)
+            })
+    }) { innerPadding ->
 
-                MapScreenState.Error.MockError -> {
-                    ErrorDialog(
-                        title = "Mock permission error",
-                        message = "You need to set this app as a mock provider in the developer options",
-                        onCLick = {TODO()},
-                        dismiss = {TODO()}
-                    )
-                }
-
-                MapScreenState.Error.NotificationError -> {
-                    ErrorDialog(
-                        title = "Notification permission error",
-                        message = "You need to allow the app to post notifications to mock your location. \n You can disable the notification channel if they bother you.",
-                        onCLick = {TODO()},
-                        dismiss = {TODO()}
-                    )
-                }
-                null -> {}
-            }
+        AnimatedVisibility(viewModel.errorDialogState.value != null) {
+            //TODO Error dialog
         }
 
-        LaunchedEffect(locationPermissionState.permissions[0].status.isGranted) {
-            if (locationPermissionState.permissions[0].status.isGranted) {
-                viewModel.acceptedLocation()
-            }
+        AnimatedVisibility(viewModel.showPointNameDialogState.value) {
+            NameInputDialog(
+                title = "Enter location name",
+                firstLabel = "Location",
+                firstValue = viewModel.originName.value,
+                onFirstValueChange = { viewModel.setOriginName(it) },
+                onDismiss = { viewModel.togglePointNameDialog(false) },
+                onConfirm = {
+                    viewModel.togglePointNameDialog(false)
+                    viewModel.saveActivePlaceOrRoute()
+                })
         }
-        LaunchedEffect(notificationPermissionState.status.isGranted) {
-            if (notificationPermissionState.status.isGranted) {
-                viewModel.acceptedLocation()
-            }
+        AnimatedVisibility(viewModel.showOriginAndDestinationNameDialogState.value) {
+            NameInputDialog(
+                title = "Enter origin and destination names",
+                firstLabel = "Origin name",
+                firstValue = viewModel.originName.value,
+                onFirstValueChange = { viewModel.setOriginName(it) },
+                secondLabel = "Destination name",
+                secondValue = viewModel.destinationName.value,
+                onSecondValueChange = { viewModel.setDestinationName(it) },
+                onDismiss = { viewModel.toggleOriginAndDestinationNameDialog(false) },
+                onConfirm = {
+                    viewModel.toggleOriginAndDestinationNameDialog(false)
+                    viewModel.saveActivePlaceOrRoute()
+                })
         }
-
-        //TODO Cleaner
-        LaunchedEffect(viewModel.animateToLocation) {
-            viewModel.animateToLocation.collect{
-                it?.let {
-                    cameraState.animate(
-                        CameraUpdateFactory.newLatLngZoom(
-                            it,13f
-                        )
-                    )
-                }
-            }
-        }
-
 
         Map(
             serviceState = updateLocationService.serviceState.value,
-            mapScreenState = viewModel.mapScreenState.value,
-            isDarkMode = false,
+            isDarkMode = when (userPreferences.value.darkMode) {
+                DarkMode.darkMode -> true
+                DarkMode.lightMode -> false
+                else -> isSystemInDarkTheme()
+            },
             cameraState = cameraState,
             markerData = markerData,
             addMarker = { viewModel.addMarker(it) },
             removeMarker = { viewModel.removeMarker(it) },
             clearAllMarkers = { viewModel.clearAllMarkers() },
-            polyline = viewModel.polylineState,
+            route = viewModel.activeRouteState.value,
             animateCameraToUser = {
                 scope.launch {
-                    cameraState.animate(
-                        CameraUpdateFactory.newLatLngZoom(
-                            viewModel.getUserLocation(context), 13f
+                    getUserLocation(context)?.let {
+                        cameraState.animate(
+                            CameraUpdateFactory.newLatLngZoom(
+                                LatLng(it.latitude, it.longitude), 13f
+                            )
                         )
-                    )
+                    }
                 }
-            }
-        )
+            })
     }
 }
-//TODO REPLACE WITH MapEffect()
-
 
 class SpoofedLocationSource(
     val spoofedLocation: LatLng

@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package google.maps.geocoding.v1;
+
+option java_package = "com.google.maps.geocoding.v1";
+option java_outer_classname = "GeocodingResourcesProto";
+option go_package = "google.golang.org/genproto/googleapis/maps/geocoding/v1;geocoding";
+
+// Latitude/longitude representation.
+message LatLng {
+  double latitude = 1;
+  double longitude = 2;
+}
+
+// Lat/Lng bounding box.
+message LatLngBounds {
+  LatLng southwest = 1;
+  LatLng northeast = 2;
+}
+
+// A single geocoding result.
+message GeocodingResult {
+  string formatted_address = 1;
+  repeated AddressComponent address_components = 2;
+  Geometry geometry = 3;
+  string place_id = 4;
+  repeated string types = 5;
+}
+
+// Address component such as street number, route, locality.
+message AddressComponent {
+  string long_text = 1;
+  string short_text = 2;
+  repeated string types = 3;
+}
+
+// Geometry data for a place.
+message Geometry {
+  LatLng location = 1;
+  LatLngBounds viewport = 2;
+  LocationType location_type = 3;
+}
+
+// The type of location returned.
+enum LocationType {
+  LOCATION_TYPE_UNSPECIFIED = 0;
+  ROOFTOP = 1;
+  RANGE_INTERPOLATED = 2;
+  GEOMETRIC_CENTER = 3;
+  APPROXIMATE = 4;
+}
