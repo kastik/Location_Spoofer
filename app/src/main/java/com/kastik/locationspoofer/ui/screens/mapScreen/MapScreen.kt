@@ -49,7 +49,6 @@ fun MapScreen(
     val scope = rememberCoroutineScope()
     val cameraState = rememberCameraPositionState()
     val animatedLocationState = viewModel.animatedLocationState.collectAsStateWithLifecycle()
-    val animatedZoomState = viewModel.animatedZoomState.collectAsStateWithLifecycle()
 
 
     viewModel.setServiceState(updateLocationService.serviceState.value)
@@ -91,16 +90,6 @@ fun MapScreen(
     LaunchedEffect(animatedLocationState.value) {
         animatedLocationState.value?.let {
             cameraState.animate(
-                CameraUpdateFactory.newLatLng(
-                    LatLng(it.latitude, it.longitude),
-                )
-            )
-        }
-    }
-
-    LaunchedEffect(animatedZoomState.value) {
-        animatedZoomState.value?.let {
-            cameraState.animate(
                 CameraUpdateFactory.newLatLngBounds(
                     it,0
                 )
@@ -115,7 +104,8 @@ fun MapScreen(
             searchPlaces = { query -> viewModel.searchForPlace(query) },
             moveToPlaceWithId = { id,zoom ->
                 viewModel.moveToPlaceWithId(id)
-                viewModel.zoomCamera(zoom) },
+                //viewModel.zoomCamera(zoom)
+                },
             placeResults = viewModel.searchResultsState,
             savedPlacesState = savedPlacesState.value,
             savedRoutesState = savedRoutesState.value

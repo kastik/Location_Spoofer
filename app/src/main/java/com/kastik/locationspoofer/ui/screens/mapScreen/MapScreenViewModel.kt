@@ -10,7 +10,6 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.places.v1.AutocompletePlacesRequest
 import com.google.maps.places.v1.GetPlaceRequest
@@ -67,11 +66,8 @@ class MapScreenViewModel @Inject constructor(
     private val _activeRouteMutableState: MutableState<Route?> = mutableStateOf(null)
     val activeRouteState: State<Route?> = _activeRouteMutableState
 
-    private val _animatedLocationMutableState = MutableStateFlow<LatLng?>(null)
-    val animatedLocationState: StateFlow<LatLng?> = _animatedLocationMutableState
-
-    private val _animatedZoomMutableState = MutableStateFlow<LatLngBounds?>(null)
-    val animatedZoomState: StateFlow<LatLngBounds?> = _animatedZoomMutableState
+    private val _animatedLocationMutableState = MutableStateFlow<LatLngBounds?>(null)
+    val animatedLocationState: StateFlow<LatLngBounds?> = _animatedLocationMutableState
 
     val savedPlacesFlow: Flow<SavedPlaces> = savedPlacesRepo.savedPlacesFlow
     val savedRoutesFlow: Flow<SavedRoutes> = savedRouteRepo.savedRoutesFlow
@@ -177,8 +173,10 @@ class MapScreenViewModel @Inject constructor(
                         .build()
                 )
                 moveCamera(
-                    LatLng(
-                        request.location.latitude, request.location.longitude
+                    LatLngBounds(
+                        request.viewport.low.toGmsLatLng(),
+                        request.viewport.high.toGmsLatLng(),
+
                     )
                 )
             }.onFailure {
@@ -272,11 +270,8 @@ class MapScreenViewModel @Inject constructor(
             _activeRouteMutableState.value = null
         }
     }
-    fun moveCamera(location: LatLng) {
+    fun moveCamera(location: LatLngBounds) {
         _animatedLocationMutableState.value = location
-    }
-    fun zoomCamera(location: LatLngBounds) {
-        _animatedZoomMutableState.value = location
     }
 
 
