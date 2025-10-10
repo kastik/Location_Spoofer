@@ -35,10 +35,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.places.v1.Place
 import com.kastik.locationspoofer.SavedPlaces
 import com.kastik.locationspoofer.SavedRoutes
 import com.kastik.locationspoofer.mapPlaceTypesToIcon
+import com.kastik.locationspoofer.toLatLngBounds
 import com.kastik.locationspoofer.ui.screens.mapScreen.components.searchbar.sub.SearchBarChips
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,7 +48,7 @@ import com.kastik.locationspoofer.ui.screens.mapScreen.components.searchbar.sub.
 fun TopSearchBar(
     navigateToSettings: () -> Unit,
     searchPlaces: (String) -> Unit,
-    moveToPlaceWithId: (String) -> Unit,
+    moveToPlaceWithId: (String, LatLngBounds) -> Unit,
     placeResults: List<Place>,
     modifier: Modifier = Modifier,
     savedPlacesState: SavedPlaces,
@@ -111,11 +113,10 @@ fun TopSearchBar(
                         ListItem(
                             headlineContent = { Text(place.name) },
                             leadingContent = { Icon(mapPlaceTypesToIcon(place.typesList), null) },
-                            // = leadingContent,
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier
                                 .clickable {
-                                    moveToPlaceWithId(place.id)
+                                    moveToPlaceWithId(place.id,place.viewport.toLatLngBounds())
                                     focusManager.clearFocus()
                                     expanded = false
                                     query.value = ""
@@ -161,7 +162,7 @@ fun TopSearchBarPreview() {
                 .setDisplayName(com.google.type.LocalizedText.newBuilder().setText("Central Park").build())
                 .build(),
         ),
-        moveToPlaceWithId = {},
+        moveToPlaceWithId = {_:String, _: LatLngBounds -> },
         savedPlacesState = SavedPlaces.newBuilder().addPlace(Place.newBuilder().setName("njnjnjnjnjn").build()).build(),
         savedRoutesState = SavedRoutes.getDefaultInstance(),
 

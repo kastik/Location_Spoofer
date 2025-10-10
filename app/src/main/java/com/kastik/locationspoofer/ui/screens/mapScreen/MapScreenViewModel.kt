@@ -11,6 +11,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.places.v1.AutocompletePlacesRequest
 import com.google.maps.places.v1.GetPlaceRequest
 import com.google.maps.places.v1.Place
@@ -68,6 +69,9 @@ class MapScreenViewModel @Inject constructor(
 
     private val _animatedLocationMutableState = MutableStateFlow<LatLng?>(null)
     val animatedLocationState: StateFlow<LatLng?> = _animatedLocationMutableState
+
+    private val _animatedZoomMutableState = MutableStateFlow<LatLngBounds?>(null)
+    val animatedZoomState: StateFlow<LatLngBounds?> = _animatedZoomMutableState
 
     val savedPlacesFlow: Flow<SavedPlaces> = savedPlacesRepo.savedPlacesFlow
     val savedRoutesFlow: Flow<SavedRoutes> = savedRouteRepo.savedRoutesFlow
@@ -270,6 +274,9 @@ class MapScreenViewModel @Inject constructor(
     }
     fun moveCamera(location: LatLng) {
         _animatedLocationMutableState.value = location
+    }
+    fun zoomCamera(location: LatLngBounds) {
+        _animatedZoomMutableState.value = location
     }
 
 
