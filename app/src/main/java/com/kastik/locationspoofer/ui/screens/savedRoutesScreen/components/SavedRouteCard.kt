@@ -19,8 +19,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Start
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -33,9 +31,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.kastik.locationspoofer.ui.theme.LocationSpooferTheme
-
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.TextButton
 
 @Composable
 fun SavedRouteCard(
@@ -50,7 +47,7 @@ fun SavedRouteCard(
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
@@ -91,7 +88,7 @@ fun SavedRouteCard(
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
+                //horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 OutlinedButton(onClick = onEditClick) {
@@ -111,10 +108,9 @@ fun SavedRouteCard(
                     Text("Delete")
                 }
                 Spacer(Modifier.width(8.dp))
-                Button(onClick = onMockClick) {
+                TextButton(onClick = onMockClick) {
                     Icon(Icons.Default.PlayArrow, contentDescription = "Mock")
-                    Spacer(Modifier.width(4.dp))
-                    Text("Mock")
+                    Text("Mock", maxLines = 1)
                 }
             }
         }

@@ -18,19 +18,38 @@ plugins {
 
 android {
     val prop = Properties()
-    prop.load(FileInputStream(file("keystore.config")))
+    val keystoreFile = file("keystore.config")
+    if (keystoreFile.exists()) {
+        prop.load(FileInputStream(keystoreFile))
+        println("Loaded keystore.config successfully.")
+    } else {
+        println("keystore.config not found. Using default debug signing config.")
+    }
+
+
     signingConfigs {
         getByName("debug") {
-            storeFile = file(prop.getProperty("debugKeystoreFile"))
-            storePassword = prop.getProperty("debugStorePassword")
-            keyAlias = prop.getProperty("debugKeyAlias")
-            keyPassword = prop.getProperty("debugKeyPassword")
+            if (keystoreFile.exists()) {
+                storeFile = file(prop.getProperty("debugKeystoreFile"))
+                storePassword = prop.getProperty("debugStorePassword")
+                keyAlias = prop.getProperty("debugKeyAlias")
+                keyPassword = prop.getProperty("debugKeyPassword")
+            } else {
+                storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
         }
         create("release") {
-            storeFile = file(prop.getProperty("releaseKeystoreFile"))
-            storePassword = prop.getProperty("releaseStorePassword")
-            keyAlias = prop.getProperty("releaseKeyAlias")
-            keyPassword = prop.getProperty("releaseKeyPassword")
+            if (keystoreFile.exists()) {
+                storeFile = file(prop.getProperty("releaseKeystoreFile"))
+                storePassword = prop.getProperty("releaseStorePassword")
+                keyAlias = prop.getProperty("releaseKeyAlias")
+                keyPassword = prop.getProperty("releaseKeyPassword")
+            } else {
+                println("⚠️ No release keystore found. You’ll need to provide one for release builds.")
+            }
         }
     }
     namespace = "com.kastik.locationspoofer"
@@ -60,12 +79,18 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+
+            if (keystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
+            }
         }
         debug {
             applicationIdSuffix = ".debug"
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -190,13 +215,6 @@ protobuf {
 }
 
 secrets {
-    // To add your Maps API key to this project:
-    // 1. If the secrets.properties file does not exist, create it in the same folder as the local.properties file.
-    // 2. Add this line, where YOUR_API_KEY is your API key:
-    //        MAPS_API_KEY=YOUR_API_KEY
     propertiesFileName = "secrets.properties"
-
-    // A properties file containing default secret values. This file can be
-    // checked in version control.
-    //defaultPropertiesFileName = "local.defaults.properties" TODO
+    defaultPropertiesFileName = "defaults.properties"
 }
