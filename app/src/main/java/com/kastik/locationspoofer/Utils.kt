@@ -11,6 +11,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
 import android.provider.Settings.SettingNotFoundException
+import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsBus
@@ -198,7 +199,7 @@ object DeveloperOptionsHelper {
     }
 }
 
-fun mapPlaceTypesToIcon(types: List<String>): ImageVector {
+fun mapPlaceTypesToIcon(types: String): ImageVector {
     return when {
         "restaurant" in types -> Icons.Filled.Restaurant
         "cafe" in types -> Icons.Filled.LocalCafe

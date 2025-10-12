@@ -1,10 +1,11 @@
 package com.kastik.locationspoofer.ui.screens.savedRoutesScreen
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kastik.locationspoofer.SavedPlaces
 import com.kastik.locationspoofer.SavedRoute
 import com.kastik.locationspoofer.SavedRoutes
+import com.kastik.locationspoofer.data.datastore.SavedPlacesRepo
 import com.kastik.locationspoofer.data.datastore.SavedRouteRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
@@ -16,24 +17,31 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class SavedRoutesScreenViewModel @Inject constructor(
+    val savedPlacesRepository: SavedPlacesRepo,
     val savedRoutesRepository: SavedRouteRepo
 ) : ViewModel() {
     private val _savedRoutes = MutableStateFlow(SavedRoutes.getDefaultInstance())
     val savedRoutes: StateFlow<SavedRoutes> = _savedRoutes.asStateFlow()
+    private val _savedPlaces = MutableStateFlow(SavedPlaces.getDefaultInstance())
+    val savedPlaces: StateFlow<SavedPlaces> = _savedPlaces.asStateFlow()
 
     init {
-        collectSavedRoutes()
+        collectSavedRoutesAndPlaces()
     }
 
-    private fun collectSavedRoutes() {
+    private fun collectSavedRoutesAndPlaces() {
         viewModelScope.launch {
             savedRoutesRepository.savedRoutesFlow.collect { savedRoutes ->
-                _savedRoutes.update {
-                    savedRoutes
-                }
+                _savedRoutes.update { savedRoutes }
+            }
+        }
+        viewModelScope.launch {
+            savedPlacesRepository.savedPlacesFlow.collect { savedPlaces ->
+                _savedPlaces.update { savedPlaces }
             }
         }
     }
+
 
     fun deleteRoute(route: SavedRoute) {
         viewModelScope.launch {

@@ -10,6 +10,7 @@ import android.os.Binder
 import android.os.Build
 import android.os.IBinder
 import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
@@ -25,21 +26,23 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 class UpdateLocationService : Service() {
-    private val _serviceMutableState: MutableState<LocationMockServiceState> =
-        mutableStateOf(LocationMockServiceState.Idle)
-    val serviceState: State<LocationMockServiceState> = _serviceMutableState
+    private val _serviceStateFlow = MutableStateFlow<LocationMockServiceState>(LocationMockServiceState.Idle)
+    val serviceStateFlow: StateFlow<LocationMockServiceState> = _serviceStateFlow
     private var locationJob: Job? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val binder = LocalBinder()
-    private var currentSpeedMps: Float = 16.666666f // always stored internally in m/s
-    private val updateIntervalMs = 1000L    // 1 second updates
+    private var currentSpeedMps: Float = 16.666666f
+    private val updateIntervalMs = 1000L
 
     override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-        _serviceMutableState.value = LocationMockServiceState.Idle
+        Log.d("MyLog", "onstart")
+        _serviceStateFlow.value = LocationMockServiceState.Idle
         return START_STICKY
     }
 
@@ -55,13 +58,14 @@ class UpdateLocationService : Service() {
     private fun startMockingLocation(
         path: List<LatLng>, loop: Boolean = false
     ) {
-        runCatching {
-            if (path.isEmpty()) return
-            createNotification()
-            locationJob?.cancel()
-            locationJob = serviceScope.launch {
+        if (path.isEmpty()) return
+        createNotification()
+        locationJob?.cancel()
+        locationJob = serviceScope.launch {
+            runCatching {
                 val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    locationManager.removeTestProvider(LocationManager.GPS_PROVIDER)
                     locationManager.addTestProvider(
                         LocationManager.GPS_PROVIDER,
                         false,
@@ -141,20 +145,25 @@ class UpdateLocationService : Service() {
                     }
 
                     locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location)
-                    _serviceMutableState.value =
+                    _serviceStateFlow.value =
                         LocationMockServiceState.MockingLocation(currentPoint)
 
                     delay(updateIntervalMs)
+                    Log.d("MyLog","dElAy")
+                }
+            }.onFailure { exception ->
+                if (exception is SecurityException) {
+                    Log.d("MyLog","SecurityException")
+                    _serviceStateFlow.value =
+                        LocationMockServiceState.Failed("Please set this app as a mock provider in the developer options")
+                } else {
+                    Log.d("MyLog","Something went wrong $exception")
+                    _serviceStateFlow.value =
+                        LocationMockServiceState.Failed("Something went wrong")
                 }
             }
-        }.onFailure { exception ->
-            if (exception is SecurityException) {
-                _serviceMutableState.value =
-                    LocationMockServiceState.Failed("Please set this app as a mock provider in the developer options")
-            } else {
-                _serviceMutableState.value = LocationMockServiceState.Failed("Something went wrong")
-            }
         }
+
     }
 
 
@@ -173,20 +182,20 @@ class UpdateLocationService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        _serviceMutableState.value = LocationMockServiceState.Idle
+        _serviceStateFlow.value = LocationMockServiceState.Idle
     }
 
     override fun onDestroy() {
         locationJob?.cancel()
         serviceScope.cancel()
-        _serviceMutableState.value = LocationMockServiceState.Idle
+        _serviceStateFlow.value = LocationMockServiceState.Idle
         super.onDestroy()
     }
 
 
     fun stopMocking() {
         locationJob?.cancel()
-        _serviceMutableState.value = LocationMockServiceState.Idle
+        _serviceStateFlow.value = LocationMockServiceState.Idle
     }
 
 

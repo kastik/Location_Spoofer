@@ -13,7 +13,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,10 +21,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.maps.places.v1.Place
+import com.google.maps.routing.v2.Polyline
 import com.google.maps.routing.v2.Route
 import com.kastik.locationspoofer.SavedRoute
-import com.kastik.locationspoofer.SavedRoutes
-import com.kastik.locationspoofer.ui.screens.mapScreen.components.fab.sub.LocationSpoofButton
 import com.kastik.locationspoofer.ui.screens.savedRoutesScreen.components.EditSavedRouteDialog
 import com.kastik.locationspoofer.ui.screens.savedRoutesScreen.components.SavedRouteCard
 import com.kastik.locationspoofer.ui.theme.LocationSpooferTheme
@@ -34,11 +34,13 @@ import com.kastik.locationspoofer.ui.theme.LocationSpooferTheme
 fun SavedRoutesScreen(
     modifier: Modifier = Modifier,
     viewModel: SavedRoutesScreenViewModel = hiltViewModel(),
-    onMockRoute: (String) -> Unit
+    onMockRoute: (Route) -> Unit
 ) {
-    val savedRoutes by viewModel.savedRoutes.collectAsState()
+    val savedRoutes by viewModel.savedRoutes.collectAsStateWithLifecycle()
+    val savedPlaces by viewModel.savedPlaces.collectAsStateWithLifecycle()
     SavedRoutesScreenContent(
         savedRoutes = savedRoutes.routesList,
+        savedPlaces = savedPlaces.placeList,
         onMockRoute = onMockRoute,
         modifier = modifier,
         onUpdateRoute = { route, newOrigin, newDestination, newName, newLoop, newSpeed ->
@@ -53,7 +55,8 @@ fun SavedRoutesScreen(
 @Composable
 fun SavedRoutesScreenContent(
     savedRoutes: List<SavedRoute>,
-    onMockRoute: (String) -> Unit,
+    savedPlaces: List<Place>,
+    onMockRoute: (Route) -> Unit,
     onUpdateRoute: (SavedRoute, String, String, String, Boolean, Float) -> Unit,
     onDeleteRoute: (SavedRoute) -> Unit,
     modifier: Modifier = Modifier,
@@ -72,16 +75,28 @@ fun SavedRoutesScreenContent(
         ) {
             items(savedRoutes) { route ->
                 SavedRouteCard(
-                    startLocationName = route.originName,
-                    endLocationName = route.destinationName,
-                    routeNickName = route.nickname,
+                    route = route,
                     onEditClick = { editingRoute = route },
                     onDeleteClick = { routeToDelete = route },
                     onMockClick = {
-                        val encodedPolyline = route.route.polyline
-                        if (encodedPolyline.hasEncodedPolyline()) {
-                            onMockRoute(encodedPolyline.toString())
-                        }
+                        onMockRoute(route.route)
+                    }
+                )
+            }
+            items(savedPlaces) { place ->
+                SavedRouteCard(
+                    place = place,
+                    onEditClick = {
+                        //editingRoute = route
+                                  },
+                    onDeleteClick = {
+                        //routeToDelete = route
+                                    },
+                    onMockClick = {
+                        //val encodedPolyline = route.route.polyline
+                        //if (encodedPolyline.hasEncodedPolyline()) {
+                        //    onMockRoute(encodedPolyline.toString())
+                        //}
                     }
                 )
             }
@@ -165,9 +180,20 @@ fun SavedRoutesScreenPreview() {
             .setDestinationName("Omonia")
             .build()
     )
+
+    val mockPlaces = listOf(
+        Place.newBuilder()
+            .setName("Giannitsa")
+            .build(),
+        Place.newBuilder()
+            .setName("Thessaloniki")
+            .build(),
+
+    )
     LocationSpooferTheme {
         SavedRoutesScreenContent(
             savedRoutes = mockRoutes,
+            savedPlaces = mockPlaces,
             onMockRoute = { },
             onDeleteRoute = { },
             onUpdateRoute = {_: SavedRoute, _: String, _: String, _: String, _: Boolean, _: Float ->}

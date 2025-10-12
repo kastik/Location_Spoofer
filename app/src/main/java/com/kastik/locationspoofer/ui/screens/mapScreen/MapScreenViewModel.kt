@@ -1,7 +1,7 @@
 package com.kastik.locationspoofer.ui.screens.mapScreen
 
 import android.annotation.SuppressLint
-import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateListOf
@@ -23,7 +23,6 @@ import com.kastik.locationspoofer.SavedPlaces
 import com.kastik.locationspoofer.SavedRoute
 import com.kastik.locationspoofer.SavedRoutes
 import com.kastik.locationspoofer.UserPreferences
-import com.kastik.locationspoofer.areNotificationsEnabled
 import com.kastik.locationspoofer.data.datastore.SavedPlacesRepo
 import com.kastik.locationspoofer.data.datastore.SavedRouteRepo
 import com.kastik.locationspoofer.data.datastore.UserPreferencesRepo
@@ -33,9 +32,9 @@ import com.kastik.locationspoofer.data.models.toGmsLatLng
 import com.kastik.locationspoofer.data.models.toMarkerData
 import com.kastik.locationspoofer.data.models.toPlaces
 import com.kastik.locationspoofer.data.models.toWaypoint
-import com.kastik.locationspoofer.isMockLocationApp
+import com.kastik.locationspoofer.di.LocationServiceManager
 import com.kastik.locationspoofer.service.LocationMockServiceState
-import com.kastik.locationspoofer.service.UpdateLocationService
+import com.kastik.locationspoofer.toLatLngBounds
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -53,21 +52,17 @@ class MapScreenViewModel @Inject constructor(
     val savedRouteRepo: SavedRouteRepo,
     val routeStub: RoutesGrpc.RoutesBlockingStub,
     val placesStub: PlacesGrpc.PlacesBlockingStub,
+    val serviceManager: LocationServiceManager
     //val geoCodingApi: GeocodingApi //TODO WIP
 ) : ViewModel() {
-
-    private val _serviceMutableState: MutableState<LocationMockServiceState> =
-        mutableStateOf(LocationMockServiceState.Idle)
-    val serviceState: State<LocationMockServiceState> = _serviceMutableState
-
     private val _activeMarkerMutableState: SnapshotStateList<MarkerData> = mutableStateListOf()
     val activeMarkerState: List<MarkerData> = _activeMarkerMutableState
 
     private val _activeRouteMutableState: MutableState<Route?> = mutableStateOf(null)
     val activeRouteState: State<Route?> = _activeRouteMutableState
 
-    private val _animatedLocationMutableState = MutableStateFlow<LatLngBounds?>(null)
-    val animatedLocationState: StateFlow<LatLngBounds?> = _animatedLocationMutableState
+    private val _animateLocationMutableState = MutableStateFlow<LatLngBounds?>(null)
+    val animateLocationState: StateFlow<LatLngBounds?> = _animateLocationMutableState
 
     val savedPlacesFlow: Flow<SavedPlaces> = savedPlacesRepo.savedPlacesFlow
     val savedRoutesFlow: Flow<SavedRoutes> = savedRouteRepo.savedRoutesFlow
@@ -86,19 +81,11 @@ class MapScreenViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = UserPreferences.getDefaultInstance()
     )
-
-
-    fun setServiceState(state: LocationMockServiceState) {
-        _serviceMutableState.value = state
-    }
-
-
-    init {
-        viewModelScope.launch {}
-    }
-
     val hasPlacedMarkerOrPolyline: Boolean
         get() = activeMarkerState.isNotEmpty() || activeRouteState.value != null
+
+    val showSaveButton: Boolean
+        get() = activeMarkerState.isNotEmpty()
 
 
     //Set names for routes dialog
@@ -125,13 +112,14 @@ class MapScreenViewModel @Inject constructor(
         _customDestinationName.value = activeMarkerState.lastOrNull()?.poi?.name.orEmpty()
     }
 
-    fun openSavePlaceDialog(){
+    fun openSavePlaceDialog() {
         if (activeMarkerState.size >= 2) {
             toggleOriginAndDestinationNameDialog(true)
         } else {
             togglePointNameDialog(true)
         }
     }
+
     fun toggleOriginAndDestinationNameDialog(show: Boolean) {
         setNamesFromMarkers()
         _showOriginAndDestinationNameDialogMutableState.value = show
@@ -165,19 +153,15 @@ class MapScreenViewModel @Inject constructor(
     }
 
 
-    fun moveToPlaceWithId(placeId: String) {
+    fun moveCameraToResultId(id: String) {
         viewModelScope.launch(Dispatchers.IO) {
             runCatching {
                 val request = placesStub.getPlace(
-                    GetPlaceRequest.newBuilder().setName("places/$placeId") //TODO Clean
+                    GetPlaceRequest.newBuilder().setName("places/$id") //TODO Clean
                         .build()
                 )
                 moveCamera(
-                    LatLngBounds(
-                        request.viewport.low.toGmsLatLng(),
-                        request.viewport.high.toGmsLatLng(),
-
-                    )
+                    request.viewport.toLatLngBounds()
                 )
             }.onFailure {
                 _errorDialogMutableState.value = AppError(
@@ -189,20 +173,6 @@ class MapScreenViewModel @Inject constructor(
     }
 
 
-    fun saveLocationPermissionRequest(){
-        viewModelScope.launch {
-            preferencesRepo.setAskedLocation(true)
-        }
-    }
-
-    fun saveNotificationPermissionRequest() {
-        viewModelScope.launch {
-            preferencesRepo.setAskedNotificationPermission(true)
-        }
-    }
-
-    val showSaveButton: Boolean
-        get() = activeMarkerState.isNotEmpty()
 
     private suspend fun saveIndividualPlace() {
         val marker = activeMarkerState.first()
@@ -266,20 +236,20 @@ class MapScreenViewModel @Inject constructor(
 
     fun clearAllMarkers() {
         _activeMarkerMutableState.clear()
-        if (_serviceMutableState.value !is LocationMockServiceState.MockingLocation){
+        if (serviceManager.serviceState.value !is LocationMockServiceState.MockingLocation) {
             _activeRouteMutableState.value = null
         }
     }
+
     fun moveCamera(location: LatLngBounds) {
-        _animatedLocationMutableState.value = location
+        _animateLocationMutableState.value = location
     }
 
 
     @OptIn(ExperimentalPermissionsApi::class)
-    fun stopSpoofing(
-        binder: UpdateLocationService, context: Context, hasLocationPermission: Boolean
-    ) {
-        binder.stopMocking()
+    fun stopSpoofing() {
+        serviceManager.stopMocking()
+        serviceManager.stopAndUnbindService()
     }
 
     fun routeSearch() {
@@ -305,9 +275,8 @@ class MapScreenViewModel @Inject constructor(
         }
     }
 
-    fun setPolyline(polyline: String) {
-        //_polyLineState.clear()
-        //_polyLineState.addAll(decodePolyline(polyline))
+    fun setActiveRoute(route: Route) {
+        _activeRouteMutableState.value = route
     }
 
 
@@ -315,18 +284,16 @@ class MapScreenViewModel @Inject constructor(
     @SuppressLint("InlinedApi")
     @OptIn(ExperimentalPermissionsApi::class)
     fun startMockingLocation(
-        context: Context,
-        binder: UpdateLocationService,
-        navigateImidietly: Polyline? = null
+        navigateImidietly: Route? = null
     ) {
-        if (!isMockLocationApp(context)) {
+        if (false) {
             _errorDialogMutableState.value = AppError(
                 title = "Mock permission error",
                 message = "You need to set this app as a mock provider in the developer options",
                 action = {},
                 dismiss = {})
         }
-        if (!areNotificationsEnabled(context)) {
+        if (false) {
             _errorDialogMutableState.value = AppError(
                 title = "Notification permission error",
                 message = "You need to allow this app to post notifications to spoof your location",
@@ -335,9 +302,12 @@ class MapScreenViewModel @Inject constructor(
         }
 
         when {
-            navigateImidietly != null -> binder.startMockingLocation(navigateImidietly)
-            activeRouteState.value != null -> binder.startMockingLocation(activeRouteState.value!!)
-            else -> binder.startMockingLocation(activeMarkerState.first().latLng)
+            navigateImidietly != null -> serviceManager.startMocking(navigateImidietly)
+            activeRouteState.value != null ->{
+                Log.d("MyLog", "iN When start mock")
+                serviceManager.startMocking(activeRouteState.value!!)
+            }
+            else -> serviceManager.startMocking(activeMarkerState.first().latLng)
         }
 
     }

@@ -43,21 +43,29 @@ fun LocationSpooferTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+    val context = LocalContext.current
+    val view = LocalView.current
     val systemDark = isSystemInDarkTheme()
 
-    val isDarkTheme = when(darkMode) {
+    val isDarkTheme = when (darkMode) {
         DarkMode.darkMode -> true
-        DarkMode.lightMode -> false
-        DarkMode.followSystem -> isSystemInDarkTheme()
-        else -> isSystemInDarkTheme()
+        DarkMode.followSystem -> systemDark
+        else -> false
     }
-    val colorScheme = if (isDarkTheme) darkColorScheme() else lightColorScheme()
-    val view = LocalView.current
+
+    val colorScheme = when {
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (isDarkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        isDarkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
+
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            //window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !systemDark
+            WindowCompat.getInsetsController(window, view)
+                .isAppearanceLightStatusBars = !isDarkTheme
         }
     }
 

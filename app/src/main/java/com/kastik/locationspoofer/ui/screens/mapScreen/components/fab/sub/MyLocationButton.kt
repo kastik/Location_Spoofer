@@ -20,22 +20,12 @@ import com.kastik.locationspoofer.ui.screens.mapScreen.MapScreenState
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun MyLocationButton(
-    serviceState: LocationMockServiceState,
     moveCameraToUser: () -> Unit
 ) {
-    val locationPermissionState = rememberPermissionState(
-        android.Manifest.permission.ACCESS_COARSE_LOCATION
-    )
-    AnimatedVisibility(
-        locationPermissionState.status.isGranted || serviceState is LocationMockServiceState.MockingLocation,
-        enter = scaleIn(),
-        exit = scaleOut()
-    ) {
-        FloatingActionButton(
-            modifier = Modifier.padding(top = 6.dp),
-            onClick = moveCameraToUser,
-            content = {
-                Icon(Icons.Default.MyLocation, contentDescription = "My Location")
-            })
-    }
+    FloatingActionButton(
+        modifier = Modifier.padding(top = 6.dp),
+        onClick = moveCameraToUser,
+        content = {
+            Icon(Icons.Default.MyLocation, contentDescription = "My Location")
+        })
 }

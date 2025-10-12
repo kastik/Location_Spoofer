@@ -21,14 +21,11 @@ import androidx.compose.material3.SearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
@@ -38,101 +35,96 @@ import androidx.compose.ui.unit.dp
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.places.v1.Place
 import com.kastik.locationspoofer.SavedPlaces
-import com.kastik.locationspoofer.SavedRoutes
 import com.kastik.locationspoofer.mapPlaceTypesToIcon
-import com.kastik.locationspoofer.toLatLngBounds
 import com.kastik.locationspoofer.ui.screens.mapScreen.components.searchbar.sub.SearchBarChips
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopSearchBar(
-    navigateToSettings: () -> Unit,
-    searchPlaces: (String) -> Unit,
-    moveToPlaceWithId: (String, LatLngBounds) -> Unit,
-    placeResults: List<Place>,
     modifier: Modifier = Modifier,
-    savedPlacesState: SavedPlaces,
-    savedRoutesState: SavedRoutes,
+    navigateToSettings: () -> Unit,
+    searchResults: List<Place>,
+    searchForPlace: (String) -> Unit,
+    savedPlacesList: SavedPlaces,
+    moveCameraToResultId: (String) -> Unit,
 ) {
-    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val query = rememberSaveable { mutableStateOf("") }
-    var expanded by rememberSaveable { mutableStateOf(false) }
+    val queryMutableState = rememberSaveable { mutableStateOf("") }
+    val isSearchBarExpandedMutableState = rememberSaveable { mutableStateOf(false) }
 
     Column {
         Box(
             modifier
                 .fillMaxWidth()
-                .semantics { isTraversalGroup = true }
-        ) {
+                .semantics { isTraversalGroup = true }) {
             SearchBar(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .semantics { traversalIndex = 0f },
                 inputField = {
                     SearchBarDefaults.InputField(
-                        query = query.value,
+                        query = queryMutableState.value,
                         onQueryChange = { newQuery ->
-                            query.value = newQuery
-                            searchPlaces(newQuery)
+                            queryMutableState.value = newQuery
+                            searchForPlace(newQuery)
                         },
                         onSearch = { newQuery ->
-                            searchPlaces(newQuery)
+                            searchForPlace(newQuery)
                             focusManager.clearFocus()
                         },
-                        expanded = expanded,
-                        onExpandedChange = { expanded = it },
+                        expanded = isSearchBarExpandedMutableState.value,
+                        onExpandedChange = { isSearchBarExpandedMutableState.value = it },
                         placeholder = {
                             Text("Search for places")
                         },
                         leadingIcon = {
-                            IconButton(onClick = {
-                                navigateToSettings()
-                            }) {
+                            IconButton(onClick = navigateToSettings) {
                                 Icon(Icons.Default.Settings, "Settings")
                             }
                         },
                         trailingIcon = {
-                            if (expanded) {
+                            if (isSearchBarExpandedMutableState.value) {
                                 IconButton(onClick = {
-                                    query.value = ""
+                                    queryMutableState.value = ""
                                     focusManager.clearFocus()
-                                    expanded = false
+                                    isSearchBarExpandedMutableState.value = false
                                 }) {
                                     Icon(Icons.Default.Close, "Delete All Text")
                                 }
                             }
-                        }
-                    )
+                        })
                 },
-                expanded = expanded,
-                onExpandedChange = { expanded = it },
+                expanded = isSearchBarExpandedMutableState.value,
+                onExpandedChange = { isSearchBarExpandedMutableState.value = it },
             ) {
                 LazyColumn {
-                    items(placeResults) { place ->
+                    items(searchResults) { result ->
                         ListItem(
-                            headlineContent = { Text(place.name) },
-                            leadingContent = { Icon(mapPlaceTypesToIcon(place.typesList), null) },
+                            headlineContent = { Text(result.name) },
+                            leadingContent = {
+                                Icon(
+                                    mapPlaceTypesToIcon(result.primaryType),
+                                    null
+                                )
+                            }, //TODO Clean map to icon
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             modifier = Modifier
                                 .clickable {
-                                    moveToPlaceWithId(place.id,place.viewport.toLatLngBounds())
+                                    moveCameraToResultId(result.id)
                                     focusManager.clearFocus()
-                                    expanded = false
-                                    query.value = ""
-                                    expanded = false
+                                    isSearchBarExpandedMutableState.value = false
+                                    queryMutableState.value = ""
+                                    isSearchBarExpandedMutableState.value = false
                                 }
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
+                                .padding(horizontal = 16.dp, vertical = 4.dp))
                     }
                 }
             }
         }
         AnimatedVisibility(true) {
             SearchBarChips(
-                savedPlaces = savedPlacesState,
-                savedRoutes = savedRoutesState,
+                savedPlaces = savedPlacesList,
                 placeMarker = {
                     //viewModel.addMarker(it)
                 })
@@ -141,30 +133,25 @@ fun TopSearchBar(
 }
 
 
-
 @Preview(
-    name = "Light Mode",
-    showBackground = true,
-    uiMode = Configuration.UI_MODE_NIGHT_NO
+    name = "Light Mode", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO
 )
 @Preview(
-    name = "Dark Mode",
-    showBackground = true,
-    uiMode = Configuration.UI_MODE_NIGHT_YES
+    name = "Dark Mode", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES
 )
 @Composable
 fun TopSearchBarPreview() {
     TopSearchBar(
         navigateToSettings = {},
-        searchPlaces = {},
-        placeResults = listOf(
-            Place.newBuilder()
-                .setDisplayName(com.google.type.LocalizedText.newBuilder().setText("Central Park").build())
-                .build(),
+        searchForPlace = {},
+        searchResults = listOf(
+            Place.newBuilder().setDisplayName(
+                com.google.type.LocalizedText.newBuilder().setText("Central Park").build()
+            ).build(),
         ),
-        moveToPlaceWithId = {_:String, _: LatLngBounds -> },
-        savedPlacesState = SavedPlaces.newBuilder().addPlace(Place.newBuilder().setName("njnjnjnjnjn").build()).build(),
-        savedRoutesState = SavedRoutes.getDefaultInstance(),
+        moveCameraToResultId = { _: String -> },
+        savedPlacesList = SavedPlaces.newBuilder()
+            .addPlace(Place.newBuilder().setName("njnjnjnjnjn").build()).build(),
 
-    )
+        )
 }

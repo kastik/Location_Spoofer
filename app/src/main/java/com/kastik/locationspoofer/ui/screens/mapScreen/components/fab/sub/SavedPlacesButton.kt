@@ -11,11 +11,12 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SavedPlacesButton(
-    navigateToSavedRoutesScreen: () -> Unit
+    navigateToSavedRoutes: () -> Unit
 ) {
     FloatingActionButton(
-        modifier = Modifier.Companion.padding(top = 6.dp), onClick = navigateToSavedRoutesScreen
+        modifier = Modifier.Companion.padding(top = 6.dp),
+        onClick = navigateToSavedRoutes
     ) {
-        Icon(Icons.Default.SaveAlt, contentDescription = "Spoof Control")
+        Icon(Icons.Default.SaveAlt, contentDescription = null)
     }
 }

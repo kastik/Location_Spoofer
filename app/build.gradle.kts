@@ -7,9 +7,10 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.mapsSecrets)
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.20"
     alias(libs.plugins.compose.compiler)
     id("com.google.firebase.crashlytics")
-    id("com.google.firebase.firebase-perf")
+    //id("com.google.firebase.firebase-perf")
     id("com.google.gms.google-services")
     id("com.google.protobuf")
     id("com.google.devtools.ksp")
@@ -125,6 +126,9 @@ dependencies {
     implementation(libs.activity.compose)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.androidx.material.icons.extended)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.serialization.protobuf)
+
 
     //Generic Compose
     implementation(platform(libs.compose.bom))
@@ -144,6 +148,7 @@ dependencies {
     //Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics.ktx)
+    //implementation(libs.google.firebase.perf)
 
     //Google Maps
     implementation(libs.maps.compose)
@@ -202,8 +207,6 @@ protobuf {
     generateProtoTasks {
         all().forEach { task ->
             task.builtins {
-                // Add this to generate Java code
-                //maybeCreate("kotlin")
                 maybeCreate("java")
             }
             task.plugins {

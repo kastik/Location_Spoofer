@@ -14,52 +14,41 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
-import com.kastik.locationspoofer.data.models.MarkerData
 
 
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun SaveLocationButton(
     showSaveButton: Boolean,
-    savePlace: () -> Unit,
     isPlaceSaved: Boolean,
-    removeSavedPlace: () -> Unit
+    savePlace: () -> Unit,
+    unSavePlace: () -> Unit
 ) {
     AnimatedVisibility(
-        visible = showSaveButton,
-        enter = scaleIn(),
-        exit = scaleOut()
+        visible = showSaveButton, enter = scaleIn(), exit = scaleOut()
     ) {
         FloatingActionButton(onClick = {
             if (isPlaceSaved) {
-                removeSavedPlace()
+                unSavePlace()
             } else {
                 savePlace()
             }
         }, content = {
             AnimatedContent(
-                targetState = isPlaceSaved,
-                transitionSpec = {
-                    // Define enter and exit separately using this scope
+                targetState = isPlaceSaved, transitionSpec = {
                     ContentTransform(
                         targetContentEnter = slideInVertically(
                             animationSpec = spring(
                                 stiffness = Spring.StiffnessLow,
                                 dampingRatio = Spring.DampingRatioHighBouncy
-                            ),
-                            initialOffsetY = { -it } // Slide in from top
-                        ),
-                        initialContentExit = fadeOut(
+                            ), initialOffsetY = { -it }), initialContentExit = fadeOut(
                             animationSpec = tween(100)
                         )
                     )
-                },
-                label = "IconTransition"
+                }, label = "IconTransition"
             ) { targetIcon ->
                 if (targetIcon) {
                     Icon(
@@ -73,8 +62,6 @@ fun SaveLocationButton(
                     )
                 }
             }
-
-
         })
     }
 }

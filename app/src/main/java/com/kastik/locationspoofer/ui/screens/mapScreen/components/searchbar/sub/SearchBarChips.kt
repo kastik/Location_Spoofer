@@ -21,31 +21,13 @@ import com.kastik.locationspoofer.data.models.toMarkerData
 @Composable
 fun SearchBarChips(
     savedPlaces: SavedPlaces,
-    savedRoutes: SavedRoutes,
     placeMarker: (MarkerData) -> Unit
-){
+) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp)
     ) {
-        items(savedRoutes.routesList) { route ->
-            FilterChip(
-                selected = true,
-                label = {
-                    Text(
-                        text = route.originName.substringBefore('\n') + route.destinationName.substringBefore('\n'),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                },
-                onClick = {
-                    route.visitDestinationsList.forEach { userDestination ->
-                        placeMarker(userDestination.toGmsLatLng().toMarkerData())
-                    }
-                }
-            )
-        }
         items(savedPlaces.placeList) { place ->
             FilterChip(
                 selected = true,

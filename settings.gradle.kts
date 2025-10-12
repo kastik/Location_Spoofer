@@ -13,5 +13,11 @@ dependencyResolutionManagement {
     }
 }
 
+buildCache {
+    local {
+        removeUnusedEntriesAfterDays = 30
+    }
+}
+
 rootProject.name = "Location Spoofer"
 include(":app")
