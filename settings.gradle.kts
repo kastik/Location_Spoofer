@@ -13,5 +13,9 @@ dependencyResolutionManagement {
     }
 }
 
+
 rootProject.name = "Location Spoofer"
-include(":app")
+include(":locationSpoofer")
+include(":baselineprofile")
+include(":proto")
+include(":tests")

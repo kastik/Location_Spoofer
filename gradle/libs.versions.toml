@@ -16,6 +16,8 @@ junit = "4.13.2"
 androidx-test-ext-junit = "1.2.1"
 espresso-core = "3.6.1"
 kotlinxCoroutinesAndroid = "1.10.2"
+kotlinxSerializationJson = "1.9.0"
+kotlinxSerializationProtobuf = "1.9.0"
 lifecycle-runtime-ktx = "2.9.2"
 activity-compose = "1.10.1"
 compose-bom = "2025.07.00"
@@ -33,6 +35,13 @@ protoGoogleCommonProtos = "2.59.1"
 retrofit = "3.0.0"
 secretsGradlePlugin = "2.0.1"
 jetbrainsKotlinJvm = "2.2.0"
+uiautomator = "2.2.0"
+benchmarkMacroJunit4 = "1.2.4"
+baselineprofile = "1.2.4"
+profileinstaller = "1.3.1"
+appcompat = "1.6.1"
+lifecycleService = "2.9.4"
+junitKtx = "1.3.0"
 
 
 [libraries]
@@ -53,6 +62,7 @@ firebase-messaging-ktx = { module = "com.google.firebase:firebase-messaging" }
 firebase-perf-ktx = { module = "com.google.firebase:firebase-perf" }
 
 
+google-firebase-perf = { module = "com.google.firebase:firebase-perf" }
 google-maps-routing = { module = "com.google.maps:google-maps-routing", version.ref = "googleMapsRouting" }
 grpc-context = { module = "io.grpc:grpc-context", version.ref = "grpc" }
 grpc-core = { module = "io.grpc:grpc-core", version.ref = "grpc" }
@@ -66,6 +76,8 @@ junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso-core" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "kotlinxCoroutinesAndroid" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
+kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinxSerializationProtobuf" }
 lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle-runtime-ktx" }
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
@@ -90,6 +102,12 @@ ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview
 ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-uiautomator = { group = "androidx.test.uiautomator", name = "uiautomator", version.ref = "uiautomator" }
+androidx-benchmark-macro-junit4 = { group = "androidx.benchmark", name = "benchmark-macro-junit4", version.ref = "benchmarkMacroJunit4" }
+androidx-profileinstaller = { group = "androidx.profileinstaller", name = "profileinstaller", version.ref = "profileinstaller" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+androidx-lifecycle-service = { group = "androidx.lifecycle", name = "lifecycle-service", version.ref = "lifecycleService" }
+androidx-junit-ktx = { group = "androidx.test.ext", name = "junit-ktx", version.ref = "junitKtx" }
 
 
 [plugins]
@@ -98,5 +116,8 @@ kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 mapsSecrets = { id = "com.google.android.libraries.mapsplatform.secrets-gradle-plugin", version.ref = "mapsSecrets"}
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "jetbrainsKotlinJvm" }
+android-test = { id = "com.android.test", version.ref = "agp" }
+baselineprofile = { id = "androidx.baselineprofile", version.ref = "baselineprofile" }
+android-library = { id = "com.android.library", version.ref = "agp" }
 
 
