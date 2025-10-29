@@ -1,0 +1,15 @@
+syntax = "proto3";
+import "google/maps/places/v1/place.proto";
+
+package com.kastik.locationspoofer;
+option java_package = "com.kastik.locationspoofer";
+option java_multiple_files = true;
+
+message SavedPlaces{
+  repeated SavedPlace place = 1;
+}
+
+message SavedPlace{
+  string nickname = 1;
+  google.maps.places.v1.Place place = 2;
+}
