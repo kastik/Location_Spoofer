@@ -16,6 +16,7 @@ import androidx.core.app.NotificationCompat
 import com.kastik.locationspoofer.data.datasource.local.SpoofDataSource
 import com.kastik.locationspoofer.domain.model.LatLngDomain
 import com.kastik.locationspoofer.domain.model.RouteDomain
+import com.kastik.locationspoofer.domain.usecase.EmulateLatLngUseCase
 import com.kastik.locationspoofer.domain.usecase.EmulateRouteUseCase
 import com.kastik.locationspoofer.ui.screens.mapScreen.SpoofState
 import dagger.hilt.android.AndroidEntryPoint
@@ -24,17 +25,18 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val EARTH_RADIUS_METERS = 6371000.0
 @AndroidEntryPoint
 class SpoofService : Service() {
-    @Inject lateinit var emulateRouteUseCase: EmulateRouteUseCase
+    @Inject
+    lateinit var emulateRouteUseCase: EmulateRouteUseCase
+
+    @Inject
+    lateinit var emulateLatLngUseCase: EmulateLatLngUseCase
 
     private val _serviceStateFlow = MutableStateFlow<SpoofState>(SpoofState.Idle)
 
@@ -50,61 +52,74 @@ class SpoofService : Service() {
     }
 
 
-    private fun startSpoofing(route: RouteDomain) {
-        locationJob?.cancel()
-        locationJob = serviceScope.launch {
-            runCatching {
-                val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-                locationManager.removeTestProvider(LocationManager.GPS_PROVIDER)
-                createTestProvider(locationManager)
-                createNotification()
-                locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
-
-                emulateRouteUseCase(route).collect { point ->
-                    val location = Location(LocationManager.GPS_PROVIDER).apply {
-                        latitude = point.lat
-                        longitude = point.lng
-                        time = System.currentTimeMillis()
-                        elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
-                        accuracy = 1f
-                        speed = route.speed.toFloat() // m/s
-                    }
-                    locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location)
-                    _serviceStateFlow.value = SpoofState.Spoofing(point)
-                }
-            }.onFailure { handleError(it) }
-        }
-    }
-    private fun startSpoofing(
-        spoofLocation: LatLngDomain
+    private fun startSpoofingRoute(
+        route: RouteDomain,
+        loopOnFinish: Boolean,
+        resetOnFinish: Boolean
     ) {
         locationJob?.cancel()
         locationJob = serviceScope.launch {
             runCatching {
                 val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
-                locationManager.removeTestProvider(LocationManager.GPS_PROVIDER)
-                createTestProvider(locationManager)
+                setupTestProvider(locationManager)
                 createNotification()
-                locationManager.setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
-                val location = Location(LocationManager.GPS_PROVIDER).apply {
-                    latitude = spoofLocation.lat
-                    longitude = spoofLocation.lng
-                    time = System.currentTimeMillis()
-                    elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
-                    accuracy = 1f
-                    speed = currentSpeedMps
-                }
-                while (isActive) {
-                    locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, location)
-                    _serviceStateFlow.value = SpoofState.Spoofing(spoofLocation)
-                    delay(updateIntervalMs)
-                }
-            }.onFailure { exception ->
-                handleError(exception)
 
-            }.also {
-                dismissNotification()
-            }
+                val reusableLocation = Location(LocationManager.GPS_PROVIDER).apply {
+                    accuracy = 1f
+                    speed = route.speed.toFloat()
+                }
+
+                emulateRouteUseCase(route, updateIntervalMs, loopOnFinish, resetOnFinish)
+                    .collect { point ->
+                        updateLocation(reusableLocation, point)
+                        locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, reusableLocation)
+                        _serviceStateFlow.value = SpoofState.Spoofing(point)
+                    }
+            }.onFailure(::handleError)
+        }
+    }
+
+    private fun startSpoofingLatLng(
+        spoofLocation: LatLngDomain
+    ) {
+        Log.d("MyLog", "Spoofing LatLngDomain")
+        locationJob?.cancel()
+        locationJob = serviceScope.launch {
+            runCatching {
+                val locationManager = getSystemService(LOCATION_SERVICE) as LocationManager
+                setupTestProvider(locationManager)
+                createNotification()
+
+                // Reuse one Location instance
+                val reusableLocation = Location(LocationManager.GPS_PROVIDER).apply {
+                    accuracy = 1f
+                    speed = 0f
+                }
+
+                emulateLatLngUseCase(spoofLocation, updateIntervalMs).collect { point ->
+                    updateLocation(reusableLocation, point)
+                    locationManager.setTestProviderLocation(LocationManager.GPS_PROVIDER, reusableLocation)
+                    _serviceStateFlow.value = SpoofState.Spoofing(point)
+                }
+            }.onFailure(::handleError)
+                .also { dismissNotification() }
+        }
+    }
+
+    private fun setupTestProvider(locationManager: LocationManager) {
+        locationManager.apply {
+            removeTestProvider(LocationManager.GPS_PROVIDER)
+            createTestProvider(this)
+            setTestProviderEnabled(LocationManager.GPS_PROVIDER, true)
+        }
+    }
+
+    private fun updateLocation(location: Location, point: LatLngDomain) {
+        location.apply {
+            latitude = point.lat
+            longitude = point.lng
+            time = System.currentTimeMillis() + 20_000L
+            elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos()
         }
     }
 
@@ -113,10 +128,12 @@ class SpoofService : Service() {
         override val spoofState: StateFlow<SpoofState>
             get() = _serviceStateFlow
 
-        override fun startSpoofing(route: RouteDomain, loop: Boolean) =
-            startSpoofing(route)
+        override fun startSpoofing(
+            route: RouteDomain, loopOnFinish: Boolean, resetOnFinish: Boolean
+        ) = startSpoofingRoute(route, loopOnFinish, resetOnFinish)
 
-        override fun startSpoofing(latLng: LatLngDomain) = this@SpoofService.startSpoofing(latLng)
+        override fun startSpoofing(latLng: LatLngDomain) =
+            startSpoofingLatLng(latLng)
 
         override fun stopSpoofing() {
             this@SpoofService.stopSpoofing()
@@ -129,6 +146,7 @@ class SpoofService : Service() {
     }
 
     override fun onDestroy() {
+        Log.d("MyLog", "Destroy Service")
         locationJob?.cancel()
         serviceScope.cancel()
         super.onDestroy()
