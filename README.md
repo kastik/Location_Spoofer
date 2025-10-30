@@ -1,5 +1,8 @@
 # 🛰️ Location Spoofer
 
+> ⚠️ **Note:** This project is currently under **active development**.  
+> Features, APIs, and modules may change frequently until the first stable release.
+
 Location Spoofer is an advanced **Android application** for simulating GPS locations, routes, and motion patterns.  
 It’s designed for **developers**, **testers**, and **researchers** who need to emulate realistic movement without physically traveling.
 
