@@ -20,7 +20,7 @@ import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.Polyline
-import com.kastik.locationspoofer.data.mapers.toLatLng
+import com.kastik.locationspoofer.data.mapers.toGmsLatLng
 import com.kastik.locationspoofer.data.mapers.toPlaceDomain
 import com.kastik.locationspoofer.decodePolyline
 import com.kastik.locationspoofer.domain.model.LatLngDomain
@@ -104,7 +104,7 @@ fun Map(
         }
         placedMarkers.forEach { marker ->
             Marker(
-                state = MarkerState(marker.toLatLng()), onClick = {
+                state = MarkerState(marker.toGmsLatLng()), onClick = {
                     removeMarker(marker)
                     true
                     //TODO Why is true needed?
@@ -115,7 +115,7 @@ fun Map(
             if (placedMarkers.isNotEmpty()) {
                 cameraState.animate(
                     CameraUpdateFactory.newLatLngZoom(
-                        placedMarkers.last().toLatLng(), 13f
+                        placedMarkers.last().toGmsLatLng(), 13f
                     )
                 )
                 if (cameraState.position.zoom < 13f) {

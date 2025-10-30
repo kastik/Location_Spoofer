@@ -10,7 +10,7 @@ import com.kastik.locationspoofer.domain.model.PlaceDomain
 fun Place.toPlaceDomain(): PlaceDomain = PlaceDomain(
     id = id,
     name = name,
-    viewport = viewport,
+    viewport = viewport.toViewportDomain(),
     location = location.toDomainLatLng()
 )
 

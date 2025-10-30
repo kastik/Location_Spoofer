@@ -1,11 +1,12 @@
 package com.kastik.locationspoofer.data.repository
 
+import android.util.Log
 import com.google.maps.routing.v2.Polyline
 import com.google.maps.routing.v2.Route
 import com.kastik.locationspoofer.SavedRoute
 import com.kastik.locationspoofer.data.datasource.local.RouteLocalDataSource
 import com.kastik.locationspoofer.data.datasource.remote.RoutesRemoteDataSource
-import com.kastik.locationspoofer.data.mapers.toLatLng
+import com.kastik.locationspoofer.data.mapers.toGmsLatLng
 import com.kastik.locationspoofer.data.mapers.toLatLngDomain
 import com.kastik.locationspoofer.data.mapers.toRouteDomain
 import com.kastik.locationspoofer.data.mapers.toRouteProto
@@ -52,7 +53,7 @@ class RoutesRepositoryImpl @Inject constructor(
             encodedPolyline = "",
             origin = "",
             destination = "",
-            waypoints = listOf(waypoints.first().location.toLatLng().toLatLngDomain()),
+            waypoints = listOf(waypoints.first().location.toGmsLatLng().toLatLngDomain()),
             nickName = "",
             loop = false,
             speed = 0.5

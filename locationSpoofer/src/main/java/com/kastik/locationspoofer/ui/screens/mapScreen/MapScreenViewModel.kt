@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.kastik.locationspoofer.UserPreferences
 import com.kastik.locationspoofer.data.datasource.local.UserPreferencesLocalDataSource
 import com.kastik.locationspoofer.data.mapers.toGmsLatLng
+import com.kastik.locationspoofer.data.mapers.toLatLngBounds
 import com.kastik.locationspoofer.data.mapers.toViewport
 import com.kastik.locationspoofer.domain.model.LatLngDomain
 import com.kastik.locationspoofer.domain.model.PlaceDomain
