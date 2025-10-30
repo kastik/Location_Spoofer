@@ -4,7 +4,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.jetbrains.kotlin.jvm)
-    id("com.google.protobuf")
+    alias(libs.plugins.protobuf)
 }
 
 java {
@@ -24,14 +24,14 @@ sourceSets["main"].proto {
 
 dependencies {
     // Protobuf and gRPC
-    implementation("javax.annotation:javax.annotation-api:1.3.2")
+    compileOnly(libs.javax.annotation.api)
     implementation(libs.kotlinx.serialization.protobuf)
     implementation(libs.grpc.core)
     implementation(libs.grpc.context)
-    implementation(libs.grpc.stub)
     implementation(libs.grpc.okhttp)
-    implementation(libs.grpc.protobuf)
-    //implementation(libs.proto.google.common.protos)
+    api(libs.grpc.stub)
+    api(libs.grpc.protobuf)
+    api(libs.proto.google.common.protos)
 }
 
 protobuf {

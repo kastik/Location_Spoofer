@@ -7,14 +7,14 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.mapsSecrets)
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.2.20"
+    alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.compose.compiler)
-    id("com.google.firebase.crashlytics")
-    //id("com.google.firebase.firebase-perf")
-    id("com.google.gms.google-services")
-    id("com.google.protobuf")
-    id("com.google.devtools.ksp")
-    id("com.google.dagger.hilt.android")
+    alias(libs.plugins.firebaseCrashlytics)
+    // alias(libs.plugins.firebasePerf)
+    alias(libs.plugins.googleServices)
+    alias(libs.plugins.protobuf)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.hiltAndroid)
     alias(libs.plugins.baselineprofile)
 }
 
@@ -22,13 +22,6 @@ android {
     val keystoreFile = layout.projectDirectory.file("keystore.config")
 
     signingConfigs {
-        getByName("debug") {
-            storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-
         create("release") {
             val propsProvider = providers.fileContents(keystoreFile)
                 .asText
@@ -79,7 +72,7 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
              signingConfig = signingConfigs.getByName("release")
 
         }
@@ -156,8 +149,8 @@ dependencies {
     //Google Maps
     implementation(libs.maps.compose)
     implementation(libs.play.services.maps)
-    implementation(libs.places)
     implementation(libs.androidx.lifecycle.service)
+    implementation(libs.play.services.location)
     //implementation(libs.androidx.profileinstaller)
     //"baselineProfile"(project(":baselineprofile"))
 
@@ -172,12 +165,8 @@ dependencies {
     //GRPC
     implementation(libs.grpc.core)
     implementation(libs.grpc.context)
-    implementation(libs.grpc.stub)
     implementation(libs.grpc.okhttp)
-    implementation(libs.grpc.protobuf)
 
-    //Protobuf models
-    //implementation(libs.proto.google.common.protos)
 
     //Network
     implementation(libs.retrofit)

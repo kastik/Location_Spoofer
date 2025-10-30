@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinAndroid)
 }
 
@@ -11,6 +11,7 @@ android {
 
     defaultConfig {
         minSdk = 26
+
     }
 
     compileOptions {
@@ -30,12 +31,26 @@ android {
 }
 
 dependencies {
-    implementation(project(":locationSpoofer"))
-    implementation(libs.androidx.junit.ktx)
+    // Core
+    testImplementation(project(":locationSpoofer"))
+    testImplementation(project(":proto"))
 
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.1")
-    testImplementation("app.cash.turbine:turbine:1.1.0")
-    testImplementation("io.mockk:mockk:1.13.9")
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    // Kotlin test utilities
     testImplementation(kotlin("test"))
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
+
+    // JUnit
+    testImplementation(libs.junit.platform.suite)
+
+    // AndroidX / DataStore
+    testImplementation(libs.androidx.junit.ktx)
+    testImplementation(libs.androidx.datastore)
+
+}
+
+
+tasks.withType<Test>().configureEach {
+    // ensures JUnit5 platform runs kotlin.test and MockK together
+    useJUnitPlatform()
 }
