@@ -22,28 +22,20 @@ android {
     val keystoreFile = layout.projectDirectory.file("keystore.config")
 
     signingConfigs {
-        create("release") {
-            val propsProvider = providers.fileContents(keystoreFile)
-                .asText
-                .map { text ->
-                    Properties().apply { load(text.reader()) }
+        signingConfigs {
+            maybeCreate("release").apply {
+                if (keystoreFile.asFile.exists()) {
+                    val props = Properties().apply {
+                        keystoreFile.asFile.inputStream().use { load(it) }
+                    }
+                    storeFile = file(props.getProperty("releaseKeystoreFile"))
+                    storePassword = props.getProperty("releaseStorePassword")
+                    keyAlias = props.getProperty("releaseKeyAlias")
+                    keyPassword = props.getProperty("releaseKeyPassword")
+                } else {
+                    println("keystore.config not found.")
                 }
-
-            val releaseStoreFileProvider = propsProvider.map { props ->
-                file(props.getProperty("releaseKeystoreFile"))
             }
-
-            storeFile = releaseStoreFileProvider.get()
-            storePassword = propsProvider.map {
-                it.getProperty("releaseStorePassword")
-            }.get()
-            keyAlias = propsProvider.map {
-                it.getProperty("releaseKeyAlias")
-            }.get()
-            keyPassword = propsProvider.map {
-                it.getProperty("releaseKeyPassword")
-            }.get()
-
         }
     }
     namespace = "com.kastik.locationspoofer"
