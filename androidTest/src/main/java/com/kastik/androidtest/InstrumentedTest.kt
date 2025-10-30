@@ -35,7 +35,7 @@ class SpoofDataSourceImplInstrumentedTest {
     @Test
     fun bindsToService_andUpdatesState() = runTest {
         val route = RouteDomain(encodedPolyline = "encoded_polyline_string")
-        dataSource.startSpoofing(route, loop = false)
+        dataSource.startSpoofing(route, loopOnFinish = false, resetOnFinish = false)
 
         val state = dataSource.spoofState.first { it is SpoofState.Spoofing }
         assertTrue(state is SpoofState.Spoofing)
