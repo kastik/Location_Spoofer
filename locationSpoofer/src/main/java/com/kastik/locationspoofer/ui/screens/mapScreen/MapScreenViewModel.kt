@@ -1,6 +1,5 @@
 package com.kastik.locationspoofer.ui.screens.mapScreen
 
-import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -8,7 +7,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kastik.locationspoofer.UserPreferences
 import com.kastik.locationspoofer.data.datasource.local.UserPreferencesLocalDataSource
-import com.kastik.locationspoofer.data.mapers.toLatLng
+import com.kastik.locationspoofer.data.mapers.toGmsLatLng
+import com.kastik.locationspoofer.data.mapers.toViewport
 import com.kastik.locationspoofer.domain.model.LatLngDomain
 import com.kastik.locationspoofer.domain.model.PlaceDomain
 import com.kastik.locationspoofer.domain.model.RouteDomain
@@ -64,13 +64,14 @@ class MapScreenViewModel @Inject constructor(
     }
 
 
-    fun startSpoofing(context: Context) {
+    fun startSpoofing() {
         val route = uiState.activeRoute
         val place = uiState.activePlaces.firstOrNull()?.location
         when {
             route != null -> startSpoofingUseCase(
                 routeDomain = route,
-                loop = /* from prefs */ false,
+                loopOnFinish = /* from prefs */ false,
+                resetOnFinish = false
             )
 
             place != null -> startSpoofingUseCase(
@@ -79,7 +80,7 @@ class MapScreenViewModel @Inject constructor(
         }
     }
 
-    fun stopSpoofing(context: Context) {
+    fun stopSpoofing() {
         stopSpoofingUseCase()
     }
 
@@ -185,41 +186,6 @@ class MapScreenViewModel @Inject constructor(
         }
     }
 
-    init {
-
-    }
-
-    fun handleIncomingArgs(
-        context: Context,
-        place: PlaceDomain?,
-        route: RouteDomain?
-    ) {
-        when {
-            place != null -> {
-                uiState = uiState.copy(
-                    activePlaces = listOf(place),
-                    fabState = uiState.fabState.copy(
-                        showSaveButton = true,
-                        showSpoofButton = true
-                    ),
-                )
-                startSpoofing(context)
-            }
-
-            route != null -> {
-                uiState = uiState.copy(
-                    activeRoute = route,
-                    fabState = uiState.fabState.copy(
-                        showSaveButton = true,
-                        showSpoofButton = true
-                    )
-                )
-                startSpoofing(context)
-            }
-        }
-    }
-
-
     fun clearCameraTarget() {
         uiState = uiState.copy(animateCameraTarget = CameraTarget.None)
     }
@@ -273,7 +239,7 @@ class MapScreenViewModel @Inject constructor(
 
                 val target = placeDomainWithBounds?.viewport?.let {
                     CameraTarget.Bounds(it.toLatLngBounds())
-                } ?: CameraTarget.Point(place.location.toLatLng())
+                } ?: CameraTarget.Point(place.location.toGmsLatLng())
 
                 uiState = uiState.copy(animateCameraTarget = target)
             }
