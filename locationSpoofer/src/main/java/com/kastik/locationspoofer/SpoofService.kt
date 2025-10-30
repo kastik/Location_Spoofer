@@ -208,8 +208,7 @@ class SpoofService : Service() {
     private fun handleError(exception: Throwable) {
         if (exception is SecurityException) {
             Log.d("MyLog", "SecurityException")
-            _serviceStateFlow.value =
-                SpoofState.Failed("Please set this app as a mock provider in the developer options")
+            _serviceStateFlow.value = SpoofState.PermissionMissing
         } else {
             Log.d("MyLog", "Something went wrong $exception")
             _serviceStateFlow.value = SpoofState.Failed("Something went wrong")

@@ -96,9 +96,12 @@ class MapScreenViewModel @Inject constructor(
 
     private fun observeServiceState() {
         viewModelScope.launch {
+            //TODO Clean this
             getSpoofingStateUseCase().collect { s ->
                 uiState = uiState.copy(
-                    fabState = uiState.fabState.copy(isSpoofing = s is SpoofState.Spoofing)
+                    spoofState = s,
+                    fabState = uiState.fabState.copy(isSpoofing = s is SpoofState.Spoofing),
+                    error = if (s is SpoofState.PermissionMissing) AppError("Please set this app as a mock provider") else null
                 )
             }
         }
