@@ -8,6 +8,7 @@ import com.kastik.locationspoofer.domain.usecase.DeletePlaceUseCase
 import com.kastik.locationspoofer.domain.usecase.DeleteRouteUseCase
 import com.kastik.locationspoofer.domain.usecase.GetSavedPlacesUseCase
 import com.kastik.locationspoofer.domain.usecase.GetSavedRoutesUseCase
+import com.kastik.locationspoofer.domain.usecase.StartSpoofingUseCase
 import com.kastik.locationspoofer.domain.usecase.UpdatePlaceUseCase
 import com.kastik.locationspoofer.domain.usecase.UpdateRouteUseCase
 import com.kastik.locationspoofer.ui.components.DialogState
@@ -25,7 +26,8 @@ class SavedRoutesScreenViewModel @Inject constructor(
     val deleteRouteUseCase: DeleteRouteUseCase,
     val deletePlaceUseCase: DeletePlaceUseCase,
     val updateRouteUseCase: UpdateRouteUseCase,
-    val updatePlaceUseCase: UpdatePlaceUseCase
+    val updatePlaceUseCase: UpdatePlaceUseCase,
+    val startSpoofingUseCase: StartSpoofingUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SavedRoutesScreenState())
@@ -142,5 +144,12 @@ class SavedRoutesScreenViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(
             dialogState = DialogState.DeletePlace(place)
         )
+    }
+
+    fun spoofLocation(route: RouteDomain){
+        startSpoofingUseCase(route, loopOnFinish = false, resetOnFinish = true)
+    }
+    fun spoofLocation(place: PlaceDomain){
+        startSpoofingUseCase(place.location)
     }
 }
