@@ -83,4 +83,7 @@ object UseCasesModule {
     @Provides @Singleton
     fun provideEmulateRouteUseCase(): EmulateRouteUseCase = EmulateRouteUseCase()
 
+    @Provides @Singleton
+    fun provideEmulateLatLngUseCase(): EmulateLatLngUseCase = EmulateLatLngUseCase()
+
 }
