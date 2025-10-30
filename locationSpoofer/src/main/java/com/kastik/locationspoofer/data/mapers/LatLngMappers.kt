@@ -14,10 +14,13 @@ fun GeocodingResourcesProto.LatLng.toLatLngDomain(): LatLngDomain = LatLngDomain
     this.longitude
 )
 
-fun LatLngDomain.toLatLng(): LatLng = LatLng(
+fun LatLngDomain.toGmsLatLng(): LatLng = LatLng(
     lat,
     lng
 )
+
+fun LatLngDomain.toGoogleTypeLatLng(): com.google.type.LatLng =
+    com.google.type.LatLng.newBuilder().setLatitude(lat).setLongitude(lng).build()
 
 fun com.google.type.LatLng.toDomainLatLng() = LatLngDomain(
     lat = latitude,
