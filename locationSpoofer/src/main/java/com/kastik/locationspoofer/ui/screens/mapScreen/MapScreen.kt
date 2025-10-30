@@ -29,9 +29,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.kastik.locationspoofer.DarkMode
-import com.kastik.locationspoofer.data.mapers.toLatLng
-import com.kastik.locationspoofer.domain.model.PlaceDomain
-import com.kastik.locationspoofer.domain.model.RouteDomain
+import com.kastik.locationspoofer.data.mapers.toGmsLatLng
 import com.kastik.locationspoofer.getUserLocation
 import com.kastik.locationspoofer.ui.components.DeleteDialog
 import com.kastik.locationspoofer.ui.components.DialogState
@@ -50,8 +48,6 @@ import kotlinx.coroutines.launch
 fun MapScreen(
     navigateToSettings: () -> Unit,
     navigateToSavedRoutes: () -> Unit,
-    route: RouteDomain? = null,
-    place: PlaceDomain? = null
 ) {
     val viewModel: MapScreenViewModel = hiltViewModel()
     val context = LocalContext.current
@@ -71,9 +67,6 @@ fun MapScreen(
 
     val userPreferences = viewModel.userPreferences.collectAsStateWithLifecycle()
 
-    LaunchedEffect(place, route) {
-        viewModel.handleIncomingArgs(context,place, route)
-    }
     //TODO Clean
     LaunchedEffect(Unit) {
         locationPermissionState.launchMultiplePermissionRequest()
@@ -101,7 +94,7 @@ fun MapScreen(
             TopSearchBar(
                 navigateToSettings = navigateToSettings,
                 onSearchQueryChanged = { query -> viewModel.searchForPlace(query) },
-                onChipClicked = { latLng -> viewModel.animateTo(CameraTarget.Point(latLng.toLatLng())) },
+                onChipClicked = { latLng -> viewModel.animateTo(CameraTarget.Point(latLng.toGmsLatLng())) },
                 searchResults = uiState.searchResults,
                 savedPlaces = if (userPreferences.value.enableStatusBarSavedRoutes) uiState.savedPlaces else emptyList(),
                 onSearchResultClick = { viewModel.moveCameraToResult(it) }, //TODO
@@ -115,8 +108,8 @@ fun MapScreen(
                 isPlaceSaved = uiState.fabState.isActiveSaved,
                 showSaveButton = uiState.fabState.showSaveButton,
                 showSpoofButton = uiState.fabState.showSpoofButton,
-                stopSpoofing = {viewModel.stopSpoofing(context) },
-                startSpoofing = { viewModel.startSpoofing(context) },
+                stopSpoofing = viewModel::stopSpoofing,
+                startSpoofing = viewModel::startSpoofing,
                 moveCameraToUser = {
                     scope.launch {
                         getUserLocation(context)?.let {
@@ -221,7 +214,7 @@ fun MapScreen(
             route = uiState.activeRoute,
             hasLocationEnabled = locationPermissionState.allPermissionsGranted,
             spoofingLocation = when (val state = uiState.spoofState) {
-                is SpoofState.Spoofing -> state.latLngDomain.toLatLng()
+                is SpoofState.Spoofing -> state.latLngDomain.toGmsLatLng()
                 else -> null
             },
             animateCameraToUser = {
