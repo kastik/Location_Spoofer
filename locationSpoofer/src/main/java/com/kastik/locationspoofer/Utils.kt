@@ -34,6 +34,7 @@ import com.google.android.gms.location.Priority
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.geo.type.Viewport
+import com.kastik.locationspoofer.domain.model.ViewPortDomain
 import kotlinx.coroutines.tasks.await
 
 suspend fun getUserLocation(context: Context): LatLng? {
@@ -56,12 +57,6 @@ suspend fun getUserLocation(context: Context): LatLng? {
     return current?.let {
         LatLng(it.latitude, it.longitude)
     }
-}
-
-fun Viewport.toLatLngBounds(): LatLngBounds {
-    val southwest = LatLng(low.latitude, low.longitude)
-    val northeast = LatLng(high.latitude, high.longitude)
-    return LatLngBounds(southwest, northeast)
 }
 
 
