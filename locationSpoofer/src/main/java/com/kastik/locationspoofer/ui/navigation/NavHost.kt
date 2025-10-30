@@ -66,11 +66,7 @@ fun NavHost(
                 popEnterTransition = { fadeIn() }
             ){ backStackEntry ->
                 val mapRoute = backStackEntry.toRoute<MapRoute>()
-                val route = mapRoute.serializedRoute?.decodeToRoute()
-                val place = mapRoute.serializedPlace?.decodeToPlace()
                 MapScreen(
-                    route = route?.route?.toRouteDomain(),
-                    place = place?.place?.toPlaceDomain(),
                     navigateToSettings = {
                         navController.navigate(
                             route = SettingsRoute,
@@ -107,28 +103,15 @@ fun NavHost(
                 ) }
             ){
                 SavedRoutesScreen(
-                    onMockRoute = { route ->
+                    navigateToMap = {
                         navController.navigate(
-                            MapRoute(
-                                serializedRoute = route.encodeToString()
-                            ),
+                            MapRoute(),
                             navOptions = NavOptions.Builder()
                                 .setLaunchSingleTop(true)
                                 .setRestoreState(true)
                                 .setPopUpTo(MapRoute(), inclusive = false)
                                 .build())
                     },
-                    onMockPlace = { place ->
-                        navController.navigate(
-                            MapRoute(
-                                serializedPlace = place.encodeToString()
-                            ),
-                            navOptions = NavOptions.Builder()
-                                .setLaunchSingleTop(true)
-                                .setRestoreState(true)
-                                .setPopUpTo(MapRoute(), inclusive = false)
-                                .build())
-                    }
                 )
             }
         }

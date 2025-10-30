@@ -29,15 +29,20 @@ import com.kastik.locationspoofer.ui.screens.savedRoutesScreen.components.SavedR
 fun SavedRoutesScreen(
     modifier: Modifier = Modifier,
     viewModel: SavedRoutesScreenViewModel = hiltViewModel(),
-    onMockRoute: (RouteDomain) -> Unit,
-    onMockPlace: (PlaceDomain) -> Unit
+    navigateToMap: () -> Unit,
 ) {
     val uiState = viewModel.uiState.collectAsStateWithLifecycle().value
 
     SavedRoutesScreenContent(
         uiState = uiState,
-        onMockRoute = onMockRoute,
-        onMockPlace = onMockPlace,
+        onMockRoute = {
+            viewModel.spoofLocation(it)
+            navigateToMap()
+        },
+        onMockPlace = {
+            viewModel.spoofLocation(it)
+            navigateToMap()
+        },
         onEditRoute = viewModel::showEditDialog,
         onEditPlace = viewModel::showEditDialog,
         onDeleteRoute = viewModel::showDeleteDialog,
