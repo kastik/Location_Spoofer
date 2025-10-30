@@ -26,7 +26,6 @@ import com.kastik.locationspoofer.domain.usecase.SaveRouteUseCase
 import com.kastik.locationspoofer.domain.usecase.SearchPlacesUseCase
 import com.kastik.locationspoofer.domain.usecase.StartSpoofingUseCase
 import com.kastik.locationspoofer.domain.usecase.StopSpoofingUseCase
-import com.kastik.locationspoofer.toLatLngBounds
 import com.kastik.locationspoofer.ui.components.DialogState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -319,65 +318,6 @@ class MapScreenViewModel @Inject constructor(
             }
         }
     }
-
-    /*
-    fun saveRouteFromDialog() {
-        val route = uiState.activeRoute ?: return
-        val updatedRoute = route.copy(
-            origin = route.origin.copy(name = origin),
-            destination = route.destination.copy(name = destination)
-        )
-
-        viewModelScope.launch {
-            saveRouteUseCase(updatedRoute)
-            uiState = uiState.copy(
-                saveDialogState = SaveDialogState.None
-            )
-        }
-    }
-
-    fun savePlaceFromDialog(name: String) {
-        val marker = uiState.activePlaces.firstOrNull() ?: return
-        val placeDomain = PlaceDomain(
-            name = name,
-            location = marker,
-        )
-
-        viewModelScope.launch {
-            savePlaceUseCase(placeDomain)
-            uiState = uiState.copy(
-                saveDialogState = SaveDialogState.None
-            )
-        }
-    }
-
-
-
-    fun deletePlace(placeId: String) {
-        viewModelScope.launch {
-            runCatching {
-                deletePlaceUseCase(placeId)
-            }.onFailure {
-                uiState = uiState.copy(
-                    error = AppError(
-                        title = "Something went wrong",
-                        action = {
-                            uiState = uiState.copy(
-                                error = null
-                            )
-                        },
-                        dismiss = {
-                            uiState = uiState.copy(
-                                error = null
-                            )
-                        }
-                    )
-                )
-            }
-        }
-    }
-
-     */
 
     fun addMarker(
         place: PlaceDomain,
