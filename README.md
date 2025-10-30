@@ -37,20 +37,6 @@ Built from scratch using **Clean Architecture** and **Jetpack Compose** it separ
 
 ---
 
-## 🧱 Architecture Overview
-
-```mermaid
-flowchart TD
-    A[UI Layer\n(Compose Screens)] -->|StateFlow, ViewModel| B[Presentation Layer]
-    B --> C[Domain Layer\n(UseCases, Models)]
-    C --> D[Data Layer\n(Repositories, DataSources)]
-    D --> E[gRPC APIs\n(Google Maps Routes, Places, Geocoding)]
-    D --> F[DataStore Proto\n(Saved Places, Routes, Preferences)]
-    E -->|Network| G[Google Maps Platform]
-```
-
----
-
 ## 🧰 Tech Stack
 
 | Category | Technologies |
@@ -117,45 +103,4 @@ locationSpoofer/
    PLACES_API_KEY=your_api_key_here
    ROUTES_API_KEY=your_api_key_here
    ```
----
-
-## 📱 Usage
-
-1. **Search a location** or select one on the map.
-2. **Tap "Spoof"** to start spoofing your position.
-3. **Load or record a route**, then **press play** to emulate movement.
-4. Adjust **speed**, **loop**, and **reset behavior** from settings.
-5. Watch your device location update in real time.
-
----
-
-## 🧑‍💻 Developer Notes
-
-- `EmulateRouteUseCase` handles polyline decoding, speed interpolation, and looping logic.
-- `MockLocationService` interacts with `LocationManager` to emit fake GPS updates.
-- `DataStore` serializes models via `kotlinx.serialization.protobuf`.
-- `SavedPlaces`, `SavedRoutes`, and `UserPreferences` are strongly typed via generated `.proto` models.
-
----
-
-## 📄 License
-
-```
-Copyright (c) 2025 Kostas Papastathopoulos
-
-Licensed under the MIT License.  
-You may use, copy, modify, and distribute this software provided that
-the above copyright notice and this permission notice appear in all copies.
-```
-
----
-
-## 🧭 Author
-
-**Kostas Papastathopoulos**  
-📧 [kostas21422112@gmail.com](mailto:kostas21422112@gmail.com)  
-
-
----
-
-> _“Simulate smart. Move anywhere.”_
+3. Run the app
