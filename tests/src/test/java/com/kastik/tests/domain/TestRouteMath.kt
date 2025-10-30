@@ -1,4 +1,4 @@
-package com.kastik.tests
+package com.kastik.tests.domain
 
 import com.kastik.locationspoofer.domain.model.LatLngDomain
 import com.kastik.locationspoofer.domain.usecase.RouteMath
