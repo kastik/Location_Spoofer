@@ -16,9 +16,10 @@ class SpoofRepositoryImpl @Inject constructor(
 
     override fun spoofLocation(
         route: RouteDomain,
-        loop: Boolean
+        loopOnFinish: Boolean,
+        resetOnFinish: Boolean
     ) {
-        spoofDataSource.startSpoofing(route, loop)
+        spoofDataSource.startSpoofing(route, loopOnFinish,resetOnFinish)
     }
 
     override fun spoofLocation(latLng: LatLngDomain) {

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface SpoofRepository {
     val spoofState: StateFlow<SpoofState>
-    fun spoofLocation(route: RouteDomain, loop: Boolean)
+    fun spoofLocation(route: RouteDomain, loopOnFinish: Boolean,resetOnFinish: Boolean)
     fun spoofLocation(latLng: LatLngDomain)
     fun stopSpoofing()
 }

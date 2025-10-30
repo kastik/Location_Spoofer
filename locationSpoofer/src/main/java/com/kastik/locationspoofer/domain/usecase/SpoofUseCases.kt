@@ -19,8 +19,8 @@ class StartSpoofingUseCase(
         repo.spoofLocation(latLngDomain)
     }
 
-    operator fun invoke(routeDomain: RouteDomain, loop: Boolean) {
-        repo.spoofLocation(routeDomain, loop)
+    operator fun invoke(routeDomain: RouteDomain, loopOnFinish: Boolean,resetOnFinish: Boolean) {
+        repo.spoofLocation(routeDomain, loopOnFinish, resetOnFinish)
     }
 }
 
@@ -39,13 +39,25 @@ class GetSpoofingStateUseCase(
 
 }
 
+class EmulateLatLngUseCase {
+    operator fun invoke(
+        latLng: LatLngDomain,
+        updateIntervalMs: Long = 1000L
+    ): Flow<LatLngDomain> = flow {
+        emit(latLng)
+        delay(updateIntervalMs)
+    }
+}
+
 class EmulateRouteUseCase(
-    private val routeMath: RouteMath = RouteMath
+    private val routeMath: RouteMath = RouteMath,
 ) {
 
     operator fun invoke(
         route: RouteDomain,
-        updateIntervalMs: Long = 1000L
+        updateIntervalMs: Long = 1000L,
+        loopOnFinish: Boolean = false,
+        resetOnFinish: Boolean = false
     ): Flow<LatLngDomain> = flow {
         val path = decodePolyline(route.encodedPolyline)
         if (path.isEmpty()) {
@@ -58,14 +70,28 @@ class EmulateRouteUseCase(
 
         while (true) {
             val nextIndex = currentIndex + 1
+
+            // End of route reached
             if (nextIndex >= path.size) {
-                if (route.loop) {
-                    currentIndex = 0
-                    currentPoint = path[0]
-                    continue
-                } else {
-                    emit(currentPoint)
-                    break
+                when {
+                    loopOnFinish -> {
+                        // Restart from beginning
+                        currentIndex = 0
+                        currentPoint = path[0]
+                        continue
+                    }
+                    resetOnFinish -> {
+                        // Reset to start and stop
+                        emit(path.first())
+                        break
+                    }
+                    else -> {
+                        // Keep emitting last point forever
+                        while (true) {
+                            emit(currentPoint)
+                            delay(updateIntervalMs)
+                        }
+                    }
                 }
             }
 
@@ -124,6 +150,7 @@ class EmulateRouteUseCase(
         return poly
     }
 }
+
 
 
 object RouteMath {

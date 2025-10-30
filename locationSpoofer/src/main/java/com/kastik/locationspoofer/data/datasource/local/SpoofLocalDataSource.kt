@@ -18,9 +18,8 @@ import kotlinx.coroutines.launch
 
 interface SpoofDataSource {
     val spoofState: StateFlow<SpoofState>
-    fun startSpoofing(route: RouteDomain, loop: Boolean)
+    fun startSpoofing(route: RouteDomain, loopOnFinish: Boolean, resetOnFinish: Boolean)
     fun startSpoofing(latLng: LatLngDomain)
-
     fun stopSpoofing()
 }
 
@@ -58,8 +57,8 @@ class SpoofDataSourceImpl(
         }
     }
 
-    override fun startSpoofing(route: RouteDomain, loop: Boolean) {
-        myService?.startSpoofing(route, loop)
+    override fun startSpoofing(route: RouteDomain, loopOnFinish: Boolean,resetOnFinish: Boolean) {
+        myService?.startSpoofing(route, loopOnFinish,resetOnFinish)
     }
 
     override fun startSpoofing(latLng: LatLngDomain) {
