@@ -21,7 +21,7 @@ class RouteLocalDataSource(
 
     suspend fun deleteRoute(route: SavedRoute) {
         routesDataStore.updateData { currentData ->
-            val updatedRoutes = currentData.routesList.filterNot {
+            val updatedRoutes = currentData.routesList.filter {
                 it.route.polyline != route.route.polyline
             }
             currentData.toBuilder()
